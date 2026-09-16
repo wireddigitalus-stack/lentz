@@ -141,6 +141,33 @@ export const EnvironmentalModule: React.FC<EnvironmentalModuleProps> = ({
     }
   };
 
+  // Auto-fetch on mount (every time user enters the Weather tab).
+  // Tries GPS silently first; falls back to the selected preset range.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(4));
+          const lon = Number(pos.coords.longitude.toFixed(4));
+          const name = `Current Location (${lat}°, ${lon}°)`;
+          setSelectedRange(name);
+          await fetchLiveWeather(lat, lon, name, true);
+        },
+        () => {
+          // GPS denied/unavailable — fall back to selected preset silently
+          const range = PRESET_RANGES.find((r) => r.name === selectedRange) ?? PRESET_RANGES[0];
+          fetchLiveWeather(range.lat, range.lon, range.name, false);
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+      );
+    } else {
+      // No geolocation support — use preset
+      const range = PRESET_RANGES.find((r) => r.name === selectedRange) ?? PRESET_RANGES[0];
+      fetchLiveWeather(range.lat, range.lon, range.name, false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
 

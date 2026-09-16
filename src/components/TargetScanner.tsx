@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Target, Upload, Ruler, RefreshCw, Plus, Trash2, CheckCircle2, ChevronRight, Zap, Info } from 'lucide-react';
+import { Target, Upload, Ruler, RefreshCw, Plus, Trash2, CheckCircle2, ChevronRight, Zap, Info, Moon, Sun } from 'lucide-react';
 import { ShotPoint, TargetCalibration, TargetAnalysis, TuneRun } from '@/types';
 import { CALIBRATION_STANDARDS } from '@/lib/constants';
 import { calculateTargetMetrics, euclideanDistance, INCHES_PER_MOA_AT_50YD } from '@/lib/ballistics';
@@ -24,6 +24,7 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
   const [isDraggingShot, setIsDraggingShot] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [targetType, setTargetType] = useState<'ara' | 'five_shot' | 'custom'>('five_shot');
+  const [targetTheme, setTargetTheme] = useState<'dark' | 'paper'>('dark');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -31,24 +32,65 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
 
   // Initialize a synthetic precision rimfire benchrest target sheet if no user image
   useEffect(() => {
-    generateSyntheticBenchrestTarget(targetType);
-  }, [targetType]);
+    generateSyntheticBenchrestTarget(targetType, targetTheme);
+  }, [targetType, targetTheme]);
 
-  const generateSyntheticBenchrestTarget = (type: 'ara' | 'five_shot' | 'custom') => {
+  const generateSyntheticBenchrestTarget = (type: 'ara' | 'five_shot' | 'custom', theme: 'dark' | 'paper' = 'dark') => {
     const canvas = document.createElement('canvas');
     canvas.width = 600;
     canvas.height = 600;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Cardstock paper background
-    ctx.fillStyle = '#F4F1EA';
-    ctx.fillRect(0, 0, 600, 600);
+    const isDark = theme === 'dark';
 
-    // Subtle paper grain
-    ctx.fillStyle = 'rgba(0,0,0,0.02)';
-    for (let i = 0; i < 4000; i++) {
-      ctx.fillRect(Math.random() * 600, Math.random() * 600, 2, 2);
+    if (isDark) {
+      // Tactical Dark Target (Precision high-contrast night optic style)
+      ctx.fillStyle = '#080A0F';
+      ctx.fillRect(0, 0, 600, 600);
+
+      // Fine tactical precision grid
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.07)';
+      ctx.lineWidth = 1;
+      const gridSize = 20;
+      for (let x = 0; x <= 600; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 600);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 600; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(600, y);
+        ctx.stroke();
+      }
+
+      // Major grid lines every 1 inch (140px)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.lineWidth = 1.5;
+      for (let x = 20; x < 600; x += 140) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 600);
+        ctx.stroke();
+      }
+      for (let y = 20; y < 600; y += 140) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(600, y);
+        ctx.stroke();
+      }
+    } else {
+      // Classic Cardstock paper background
+      ctx.fillStyle = '#F4F1EA';
+      ctx.fillRect(0, 0, 600, 600);
+
+      // Subtle paper grain
+      ctx.fillStyle = 'rgba(0,0,0,0.02)';
+      for (let i = 0; i < 4000; i++) {
+        ctx.fillRect(Math.random() * 600, Math.random() * 600, 2, 2);
+      }
     }
 
     const centerX = 300;
@@ -58,8 +100,8 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
 
     if (type === 'ara') {
       // ARA 25-Bull Style Target Bullseye
-      ctx.strokeStyle = '#1E293B';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isDark ? '#38BDF8' : '#1E293B';
+      ctx.lineWidth = isDark ? 2 : 1.5;
 
       // 50-ring, 100-ring
       const rings = [
@@ -74,17 +116,27 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
         ctx.stroke();
       });
 
+      // Subtle dashed inner rings in dark mode
+      if (isDark) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ppi * 0.125, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       // Center dot (dot is 0.050")
-      ctx.fillStyle = '#0F172A';
+      ctx.fillStyle = isDark ? '#F59E0B' : '#0F172A';
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, isDark ? 5 : 4, 0, Math.PI * 2);
       ctx.fill();
 
       // Calibration Quarter in bottom corner
-      drawCalibrationCoin(ctx, 100, 480, ppi * 0.955);
+      drawCalibrationCoin(ctx, 100, 480, ppi * 0.955, isDark);
     } else {
       // 5-Shot Tuning Test Square Target (typical for PSL & Lentz workshop testing)
-      ctx.strokeStyle = '#0F172A';
+      ctx.strokeStyle = isDark ? '#38BDF8' : '#0F172A';
       ctx.lineWidth = 2;
 
       // 1-inch outer test box
@@ -100,12 +152,31 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
       ctx.closePath();
       ctx.stroke();
 
-      // Center aiming point
-      ctx.fillStyle = '#EF4444';
-      ctx.fillRect(centerX - 8, centerY - 8, 16, 16);
+      if (isDark) {
+        // High-contrast orange center aiming point with glow
+        ctx.fillStyle = '#FF5500';
+        ctx.fillRect(centerX - 8, centerY - 8, 16, 16);
+        ctx.strokeStyle = '#FFAA00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(centerX - 8, centerY - 8, 16, 16);
+
+        // Center crosshair tick
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 12, centerY);
+        ctx.lineTo(centerX + 12, centerY);
+        ctx.moveTo(centerX, centerY - 12);
+        ctx.lineTo(centerX, centerY + 12);
+        ctx.stroke();
+      } else {
+        // Classic red square aiming point
+        ctx.fillStyle = '#EF4444';
+        ctx.fillRect(centerX - 8, centerY - 8, 16, 16);
+      }
 
       // Calibration Quarter in bottom corner
-      drawCalibrationCoin(ctx, 100, 480, ppi * 0.955);
+      drawCalibrationCoin(ctx, 100, 480, ppi * 0.955, isDark);
     }
 
     const img = new Image();
@@ -124,23 +195,47 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
     };
   };
 
-  const drawCalibrationCoin = (ctx: CanvasRenderingContext2D, x: number, y: number, diameterPx: number) => {
+  const drawCalibrationCoin = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    diameterPx: number,
+    isDark = false
+  ) => {
     const radius = diameterPx / 2;
     ctx.save();
-    ctx.fillStyle = '#CBD5E1';
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#64748B';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    if (isDark) {
+      ctx.fillStyle = '#1A2333';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    ctx.fillStyle = '#475569';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('QUARTER', x, y - 6);
-    ctx.fillText('0.955"', x, y + 6);
+      ctx.fillStyle = '#7DD3FC';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('QUARTER', x, y - 6);
+      ctx.font = '10px monospace';
+      ctx.fillText('0.955"', x, y + 8);
+    } else {
+      ctx.fillStyle = '#CBD5E1';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#64748B';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('QUARTER', x, y - 6);
+      ctx.fillText('0.955"', x, y + 6);
+    }
     ctx.restore();
   };
 
@@ -160,18 +255,46 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
 
     shots.forEach((shot, idx) => {
       const isSelected = shot.id === activeShotId || shot.id === isDraggingShot;
+      const isDark = targetTheme === 'dark';
 
-      // Bullet Wipe Ring (dark outer graphite/lube ring characteristic of rimfire match bullets)
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.beginPath();
-      ctx.arc(shot.x, shot.y, bulletRadiusPx, 0, Math.PI * 2);
-      ctx.fill();
+      if (isDark) {
+        // High-contrast luminous bullet impact ring
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx + 2, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Paper tear hole inside
-      ctx.fillStyle = '#08090C';
-      ctx.beginPath();
-      ctx.arc(shot.x, shot.y, bulletRadiusPx * 0.85, 0, Math.PI * 2);
-      ctx.fill();
+        // Dark bullet wipe hole
+        ctx.fillStyle = '#030712';
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner rimfire lead core
+        ctx.fillStyle = '#1E293B';
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer precision ring
+        ctx.strokeStyle = isSelected ? '#38BDF8' : 'rgba(56, 189, 248, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        // Bullet Wipe Ring (dark outer graphite/lube ring characteristic of rimfire match bullets)
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Paper tear hole inside
+        ctx.fillStyle = '#08090C';
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, bulletRadiusPx * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Precision center crosshair
       ctx.strokeStyle = isSelected ? '#38BDF8' : '#10B981';
@@ -502,256 +625,277 @@ export const TargetScanner: React.FC<TargetScannerProps> = ({ onSaveRun, activeT
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="flex flex-col gap-5">
 
-      {/* ── METRICS SIDEBAR ── shows ABOVE canvas on mobile, right side on desktop ── */}
-      <div className="order-first lg:order-none lg:col-span-4 flex flex-col gap-4">
+      {/* ── TOP CONTROL BAR ── */}
+      <div className="flex items-center gap-3 flex-wrap">
 
-        {/* Key Metrics Row — horizontal scroll on mobile to keep above-fold */}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 lg:flex-col lg:overflow-visible">
-
-          {/* Core Vertical Dispersion Card (The Tuner Metric) */}
-          <div className="bg-[#10131A]/90 border border-white/10 rounded-2xl p-5 backdrop-blur-xl shadow-glass relative overflow-hidden shrink-0 min-w-[200px] lg:min-w-0">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs uppercase font-mono text-red-300 tracking-wider font-bold">
-                Vertical Spread
-              </span>
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 font-mono">
-                Harmonic
-              </span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-black font-mono tracking-tight text-white">
-                {metrics.verticalSpreadInches}
-              </span>
-              <span className="text-sm font-mono font-bold text-neutral-300">in</span>
-              <span className="text-xl font-black font-mono text-neutral-300 ml-2">
-                {(metrics.verticalSpreadInches / INCHES_PER_MOA_AT_50YD).toFixed(2)}
-                <span className="text-xs font-mono font-bold text-neutral-400 ml-1">MOA</span>
-              </span>
-            </div>
-            <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed font-medium hidden lg:block">
-              Muzzle harmonics directly govern vertical launch angle. Sweet spot compresses this to near zero.
-            </p>
-          </div>
-
-          {/* Secondary metrics 2-up grid (horizontal on mobile inside scroll, 2-col grid on desktop) */}
-          <div className="grid grid-cols-2 gap-3 shrink-0 lg:shrink lg:w-full" style={{ minWidth: '220px' }}>
-            {/* Group Size */}
-            <div className="bg-[#10131A]/90 border border-white/10 rounded-xl p-4">
-              <span className="text-xs font-mono font-bold text-neutral-300 uppercase block">Group (ES)</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl font-black font-mono text-white">{metrics.groupSizeInches}</span>
-                <span className="text-xs font-mono font-bold text-neutral-400">in</span>
-              </div>
-              <span className="text-xs font-mono font-bold text-neutral-300 block mt-1">
-                {metrics.groupMoa50Yd} MOA
-              </span>
-            </div>
-            {/* Horizontal */}
-            <div className="bg-[#10131A]/90 border border-white/10 rounded-xl p-4">
-              <span className="text-xs font-mono font-bold text-neutral-300 uppercase block">Horizontal</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl font-black font-mono text-neutral-100">{metrics.horizontalSpreadInches}</span>
-                <span className="text-xs font-mono font-bold text-neutral-400">in</span>
-              </div>
-              <span className="text-xs font-mono font-semibold text-neutral-400 block mt-1">Wind / Cant</span>
-            </div>
-            {/* Mean Radius */}
-            <div className="bg-[#10131A]/90 border border-white/10 rounded-xl p-4">
-              <span className="text-xs font-mono font-bold text-neutral-300 uppercase block">Mean Radius</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl font-black font-mono text-neutral-100">{metrics.meanRadiusInches}</span>
-                <span className="text-xs font-mono font-bold text-neutral-400">in</span>
-              </div>
-              <span className="text-xs font-mono font-semibold text-neutral-400 block mt-1">Radial</span>
-            </div>
-            {/* Ref Standard */}
-            <div className="bg-[#10131A]/90 border border-white/10 rounded-xl p-4">
-              <span className="text-xs font-mono font-bold text-neutral-300 uppercase block">Ref Scale</span>
-              <select
-                value={selectedCalibration}
-                onChange={(e) => setSelectedCalibration(e.target.value as any)}
-                className="mt-1.5 w-full bg-neutral-900 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-sky-300 font-bold focus:outline-none"
-              >
-                <option value="quarter">Quarter (0.955″)</option>
-                <option value="dime">Dime (0.705″)</option>
-                <option value="one_inch_square">1.000″ Ruler</option>
-                <option value="ara_ring_100">ARA 100 (0.500″)</option>
-              </select>
-            </div>
-          </div>
+        {/* Target type toggle */}
+        <div className="flex bg-neutral-900 rounded-2xl p-1 border border-white/10 shadow-inner flex-1 min-w-[160px]">
+          <button
+            onClick={() => setTargetType('five_shot')}
+            className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
+              targetType === 'five_shot'
+                ? 'bg-sky-500 text-white shadow-md'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            5-Shot
+          </button>
+          <button
+            onClick={() => setTargetType('ara')}
+            className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
+              targetType === 'ara'
+                ? 'bg-sky-500 text-white shadow-md'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            ARA Bull
+          </button>
         </div>
 
-        {/* Commit to Active Tuning Run Button — sticky on mobile */}
-        <div className="bg-[#10131A]/90 border border-white/10 rounded-2xl p-5 backdrop-blur-xl flex flex-col gap-3 sticky bottom-4 lg:static shadow-2xl lg:shadow-none">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-200">Tuner Dial Setting:</span>
-            <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40">
-              {activeTunerClick} Clicks
-            </span>
-          </div>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Calibrate */}
           <button
-            onClick={handleCommitToTuning}
-            disabled={shots.length === 0}
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm md:text-base shadow-glow-blue flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]"
+            onClick={() => {
+              setCalibrationActive(!calibrationActive);
+              setCalibPointA(null);
+              setCalibPointB(null);
+            }}
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm border transition-all min-h-[48px] ${
+              calibrationActive
+                ? 'bg-amber-500 text-black border-amber-300 shadow-lg scale-[1.02]'
+                : 'bg-neutral-900 text-neutral-200 border-white/10 hover:bg-neutral-800'
+            }`}
+            title={calibrationActive ? 'Tap 2 Coin Edges' : 'Calibrate Scale'}
           >
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Save Run to Harmonic Session</span>
+            <Ruler className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{calibrationActive ? 'Tap Edges' : 'Calibrate'}</span>
           </button>
+
+          {/* Auto Detect */}
+          <button
+            onClick={runAutoDetectHoles}
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/30 transition-all min-h-[48px]"
+            title="Auto-detect bullet holes"
+          >
+            <Zap className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Auto-Find</span>
+          </button>
+
+          {/* Dark / Paper Target Theme Toggle */}
+          <button
+            onClick={() => setTargetTheme(targetTheme === 'dark' ? 'paper' : 'dark')}
+            className={`flex items-center gap-2 px-3.5 py-3 rounded-2xl font-bold text-sm border transition-all min-h-[48px] ${
+              targetTheme === 'dark'
+                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm'
+                : 'bg-amber-500/20 text-amber-200 border-amber-500/40 shadow-sm'
+            }`}
+            title={targetTheme === 'dark' ? 'Switch to Classic Paper Target' : 'Switch to Tactical Night Target'}
+          >
+            {targetTheme === 'dark' ? <Moon className="w-4 h-4 text-sky-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
+            <span className="hidden sm:inline font-mono text-xs uppercase font-bold">{targetTheme === 'dark' ? 'Night' : 'Paper'}</span>
+          </button>
+
+          {/* Upload Photo */}
+          <label
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-white/10 transition-all cursor-pointer min-h-[48px]"
+            title="Upload target photo"
+          >
+            <Upload className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Photo</span>
+            <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          </label>
         </div>
       </div>
 
-      {/* ── CANVAS VIEWPORT ── */}
-      <div className="order-last lg:order-none lg:col-span-8 bg-[#10131A]/90 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-glass flex flex-col items-center relative">
+      {/* ── MAIN CONTENT — canvas left, metrics right on desktop ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-        {/* Compact Top Control Bar */}
-        <div className="w-full flex items-center justify-between gap-2 mb-3 pb-3 border-b border-white/[0.08]">
+        {/* ── CANVAS VIEWPORT ── */}
+        <div className="lg:col-span-7 flex flex-col gap-3">
+          <div className="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-white/10 bg-[#05060A] select-none touch-none shadow-2xl" style={{ boxShadow: '0 0 40px rgba(56,189,248,0.06), inset 0 0 60px rgba(0,0,0,0.6)' }}>
 
-          {/* Target type toggle */}
-          <div className="flex bg-neutral-900 rounded-xl p-1 border border-white/15 text-sm">
-            <button
-              onClick={() => setTargetType('five_shot')}
-              className={`px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-                targetType === 'five_shot' ? 'bg-sky-500 text-white shadow-sm' : 'text-neutral-300 hover:text-white'
-              }`}
-            >
-              5-Shot
-            </button>
-            <button
-              onClick={() => setTargetType('ara')}
-              className={`px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-                targetType === 'ara' ? 'bg-sky-500 text-white shadow-sm' : 'text-neutral-300 hover:text-white'
-              }`}
-            >
-              ARA
-            </button>
-          </div>
+            {/* Crosshair corner accents */}
+            <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-sky-500/60 rounded-tl pointer-events-none z-10" />
+            <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-sky-500/60 rounded-tr pointer-events-none z-10" />
+            <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-sky-500/60 rounded-bl pointer-events-none z-10" />
+            <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-sky-500/60 rounded-br pointer-events-none z-10" />
 
-          {/* Action buttons — icon only on mobile, icon+label on sm+ */}
-          <div className="flex items-center gap-2">
-            {/* Calibrate */}
-            <button
-              onClick={() => {
-                setCalibrationActive(!calibrationActive);
-                setCalibPointA(null);
-                setCalibPointB(null);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border transition-colors min-h-[44px] ${
-                calibrationActive
-                  ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-md'
-                  : 'bg-neutral-900 text-neutral-200 border-white/15 hover:bg-neutral-800'
-              }`}
-              title={calibrationActive ? 'Tap 2 Coin Edges' : 'Calibrate Scale'}
-            >
-              <Ruler className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">{calibrationActive ? 'Tap 2 Edges' : 'Calibrate'}</span>
-            </button>
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={600}
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+              onPointerLeave={handleCanvasPointerLeave}
+              className="w-full h-full object-contain cursor-crosshair"
+            />
 
-            {/* Auto Detect */}
-            <button
-              onClick={runAutoDetectHoles}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition-colors min-h-[44px]"
-              title="Auto-Find bullet holes"
-            >
-              <Zap className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Auto-Find</span>
-            </button>
-
-            {/* Upload Photo */}
-            <label
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-white/15 transition-colors cursor-pointer min-h-[44px]"
-              title="Upload target photo"
-            >
-              <Upload className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Photo</span>
-              <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-            </label>
-          </div>
-        </div>
-
-        {/* Canvas & Magnifier Container */}
-        <div className="relative w-full aspect-square max-w-[560px] rounded-xl overflow-hidden border border-white/15 bg-neutral-950 flex items-center justify-center select-none touch-none shadow-inner">
-          <canvas
-            ref={canvasRef}
-            width={600}
-            height={600}
-            onPointerDown={handleCanvasPointerDown}
-            onPointerMove={handleCanvasPointerMove}
-            onPointerUp={handleCanvasPointerUp}
-            onPointerLeave={handleCanvasPointerLeave}
-            className="w-full h-full object-contain cursor-crosshair"
-          />
-
-          {/* Apple-style floating 3x zoom loupe */}
-          {hoverPos && (
-            <div
-              className="absolute pointer-events-none rounded-full shadow-2xl overflow-hidden border-2 border-sky-400 z-20 backdrop-blur-sm transition-transform duration-75"
-              style={{
-                width: 130,
-                height: 130,
-                left: `${(hoverPos.x / 600) * 100}%`,
-                top: `${(hoverPos.y / 600) * 100}%`,
-                transform: 'translate(-50%, -125%)',
-              }}
-            >
-              <canvas ref={loupeCanvasRef} width={130} height={130} />
-            </div>
-          )}
-
-          {/* ── Calibration canvas overlay (change 5) ── */}
-          {/* Appears directly on canvas so user's eyes stay on the target */}
-          {calibrationActive && (
-            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center gap-3">
-              <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-4 border border-amber-400/60 flex flex-col items-center gap-2 shadow-2xl">
-                <Ruler className="w-6 h-6 text-amber-400" />
-                <span className="text-amber-300 font-extrabold text-base text-center leading-snug">
-                  {!calibPointA
-                    ? 'Tap Coin Edge  1 of 2'
-                    : 'Tap Coin Edge  2 of 2'}
-                </span>
-                <span className="text-amber-200/70 font-medium text-xs text-center">
-                  {!calibPointA
-                    ? 'Touch one edge of your reference coin'
-                    : 'Now touch the opposite edge'}
-                </span>
-                {calibPointA && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span className="text-xs font-mono text-amber-300 font-bold">Edge 1 locked</span>
-                  </div>
-                )}
+            {/* Zoom loupe */}
+            {hoverPos && (
+              <div
+                className="absolute pointer-events-none rounded-full shadow-2xl overflow-hidden border-2 border-sky-400 z-20"
+                style={{
+                  width: 140,
+                  height: 140,
+                  left: `${(hoverPos.x / 600) * 100}%`,
+                  top: `${(hoverPos.y / 600) * 100}%`,
+                  transform: 'translate(-50%, -125%)',
+                  boxShadow: '0 0 20px rgba(56,189,248,0.4)',
+                }}
+              >
+                <canvas ref={loupeCanvasRef} width={140} height={140} />
+                {/* Crosshair overlay on loupe */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-full h-px bg-sky-400/40" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="h-full w-px bg-sky-400/40" />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Bottom toolbar */}
-        <div className="w-full flex items-center justify-between mt-3 text-sm text-neutral-300 font-medium">
-          <div className="flex items-center gap-3">
-            <span>
-              Shots: <strong className="text-white font-mono font-bold text-base">{shots.length}</strong>/5
-            </span>
-            <span className="text-neutral-500">•</span>
-            <span>
-              Scale: <strong className="text-neutral-100 font-mono font-bold">{pixelsPerInch} px/in</strong>
-            </span>
+            {/* Calibration overlay */}
+            {calibrationActive && (
+              <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
+                <div className="bg-black/80 backdrop-blur-md rounded-2xl px-6 py-5 border-2 border-amber-400/70 flex flex-col items-center gap-2.5 shadow-2xl">
+                  <Ruler className="w-7 h-7 text-amber-400" />
+                  <span className="text-amber-300 font-black text-lg text-center leading-tight">
+                    {!calibPointA ? 'Tap Edge 1 of 2' : 'Tap Edge 2 of 2'}
+                  </span>
+                  <span className="text-amber-200/80 font-medium text-sm text-center">
+                    {!calibPointA ? 'Touch one edge of your reference coin' : 'Now touch the opposite edge'}
+                  </span>
+                  {calibPointA && (
+                    <div className="flex items-center gap-2 mt-1 px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="text-sm font-mono text-amber-300 font-bold">Edge 1 locked</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Canvas status bar */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-4 text-sm font-semibold">
+              <span className="text-neutral-400">
+                Shots: <strong className="text-white font-mono text-base">{shots.length}</strong>
+                <span className="text-neutral-600">/5</span>
+              </span>
+              <span className="text-neutral-600">•</span>
+              <span className="text-neutral-400">
+                Scale: <strong className="text-neutral-200 font-mono">{pixelsPerInch} px/in</strong>
+              </span>
+            </div>
             {shots.length > 0 && (
               <button
                 onClick={clearAllShots}
-                className="text-neutral-400 hover:text-red-400 text-sm font-semibold flex items-center gap-1.5 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-neutral-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all min-h-[40px]"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Reset</span>
+                Reset
               </button>
             )}
           </div>
         </div>
-      </div>
 
+        {/* ── METRICS SIDEBAR ── */}
+        <div className="lg:col-span-5 flex flex-col gap-3">
+
+          {/* VERTICAL SPREAD — hero card, tuner's #1 metric */}
+          <div className="rounded-2xl p-5 relative overflow-hidden border border-red-500/30" style={{ background: 'linear-gradient(135deg, #1A0A0A 0%, #12060A 100%)', boxShadow: '0 0 30px rgba(239,68,68,0.08)' }}>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs uppercase font-mono text-red-400 tracking-widest font-bold">⬆ Vertical Spread</span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 font-mono">Harmonic</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-black font-mono tracking-tight text-white leading-none">
+                {metrics.verticalSpreadInches}
+              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-mono font-bold text-red-300">in</span>
+                <span className="text-sm font-mono font-bold text-neutral-400">{(metrics.verticalSpreadInches / INCHES_PER_MOA_AT_50YD).toFixed(2)} MOA</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-200/50 mt-2 font-medium leading-snug">
+              Tuner sweet spot compresses this toward zero
+            </p>
+          </div>
+
+          {/* Secondary metrics 2-up */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Group Size */}
+            <div className="rounded-2xl p-4 border border-sky-500/20" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #080D18 100%)' }}>
+              <span className="text-xs font-mono font-bold text-sky-400 uppercase tracking-wide block">Group (ES)</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-3xl font-black font-mono text-white">{metrics.groupSizeInches}</span>
+                <span className="text-xs font-mono font-bold text-sky-400">in</span>
+              </div>
+              <span className="text-sm font-mono font-bold text-sky-300/70 block mt-1">{metrics.groupMoa50Yd} MOA</span>
+            </div>
+
+            {/* Horizontal */}
+            <div className="rounded-2xl p-4 border border-emerald-500/20" style={{ background: 'linear-gradient(135deg, #060F0A 0%, #080E0C 100%)' }}>
+              <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wide block">Horizontal</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-3xl font-black font-mono text-white">{metrics.horizontalSpreadInches}</span>
+                <span className="text-xs font-mono font-bold text-emerald-400">in</span>
+              </div>
+              <span className="text-sm font-mono font-semibold text-emerald-300/60 block mt-1">Wind / Cant</span>
+            </div>
+
+            {/* Mean Radius */}
+            <div className="rounded-2xl p-4 border border-violet-500/20" style={{ background: 'linear-gradient(135deg, #0C0816 0%, #0A0714 100%)' }}>
+              <span className="text-xs font-mono font-bold text-violet-400 uppercase tracking-wide block">Mean Radius</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-3xl font-black font-mono text-white">{metrics.meanRadiusInches}</span>
+                <span className="text-xs font-mono font-bold text-violet-400">in</span>
+              </div>
+              <span className="text-sm font-mono font-semibold text-violet-300/60 block mt-1">Radial Avg</span>
+            </div>
+
+            {/* Ref Scale selector */}
+            <div className="rounded-2xl p-4 border border-amber-500/20" style={{ background: 'linear-gradient(135deg, #120E04 0%, #100C04 100%)' }}>
+              <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wide block">Ref Scale</span>
+              <select
+                value={selectedCalibration}
+                onChange={(e) => setSelectedCalibration(e.target.value as any)}
+                className="mt-2 w-full bg-black/40 border border-amber-500/30 rounded-xl px-2 py-2.5 text-sm text-amber-300 font-bold focus:outline-none focus:border-amber-400"
+              >
+                <option value="quarter">Quarter 0.955″</option>
+                <option value="dime">Dime 0.705″</option>
+                <option value="one_inch_square">1.000″ Ruler</option>
+                <option value="ara_ring_100">ARA 100 · 0.500″</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Save to Session — big CTA */}
+          <div className="rounded-2xl p-4 border border-white/8 bg-[#0D1017]/80 flex flex-col gap-3 mt-auto">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-neutral-300">Current Dial Setting</span>
+              <span className="text-sm font-mono font-black px-3 py-1.5 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                {activeTunerClick} Clicks
+              </span>
+            </div>
+            <button
+              onClick={handleCommitToTuning}
+              disabled={shots.length === 0}
+              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-base shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]"
+              style={{ boxShadow: shots.length > 0 ? '0 4px 24px rgba(56,189,248,0.25)' : undefined }}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Save Run to Harmonic Log
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

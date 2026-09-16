@@ -102,8 +102,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="logo-wordmark text-base font-extrabold tracking-tight font-sans">
                   LENTZ
                 </span>
-                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                  PRO
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 whitespace-nowrap">
+                  TUNER PRO
                 </span>
               </div>
               <p className="text-xs text-neutral-400 font-sans font-medium truncate max-w-[150px] sm:max-w-none">

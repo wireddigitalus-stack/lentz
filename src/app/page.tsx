@@ -356,7 +356,15 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Chrono Import — quick import from Garmin Xero or any chrono */}
+            <EnvironmentalModule
+              session={activeSession}
+              activeAmmo={activeAmmo}
+              onUpdateEnvironment={handleUpdateEnvironment}
+              activeTunerClick={currentClick}
+              onApplyClick={(click) => setCurrentClick(click)}
+            />
+
+            {/* Chrono Import — at bottom, after weather data */}
             <ChronoImportCard
               onApplyToAmmo={(result) => {
                 if (activeAmmo) {
@@ -373,14 +381,6 @@ export default function Home() {
                 setCurrentClick(click);
                 setActiveTab('tuner');
               }}
-            />
-
-            <EnvironmentalModule
-              session={activeSession}
-              activeAmmo={activeAmmo}
-              onUpdateEnvironment={handleUpdateEnvironment}
-              activeTunerClick={currentClick}
-              onApplyClick={(click) => setCurrentClick(click)}
             />
           </div>
         )}
