@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #08090C;
+  --foreground: #F8FAFC;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars for macOS / iOS feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Hide scrollbars for touch-friendly horizontal tab navigation */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.22s ease-out both;
+}
+
+/* ──────────────────────────────────────────────
+   LOGO ANIMATIONS
+────────────────────────────────────────────── */
+
+/* Outer ring — slow clockwise rotation */
+@keyframes logoRingCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.logo-ring-cw {
+  animation: logoRingCW 18s linear infinite;
+  transform-origin: center;
+}
+
+/* Inner ring — slow counter-clockwise rotation */
+@keyframes logoRingCCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+.logo-ring-ccw {
+  animation: logoRingCCW 12s linear infinite;
+  transform-origin: center;
+}
+
+/* Conic shimmer sweep — rotates the conic-gradient border */
+@keyframes logoShimmer {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.logo-shimmer {
+  animation: logoShimmer 4s linear infinite;
+  transform-origin: center;
+}
+
+/* Centre bullet / disc — slow breathe pulse */
+@keyframes logoPulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%       { opacity: 0.7; transform: scale(0.88); }
+}
+.logo-pulse {
+  animation: logoPulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Outer glow halo breathe */
+@keyframes logoGlow {
+  0%, 100% { opacity: 0.45; transform: scale(1);    }
+  50%       { opacity: 0.9;  transform: scale(1.15); }
+}
+.logo-glow {
+  animation: logoGlow 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Wordmark shimmer — slides a highlight across "LENTZ" */
+@keyframes wordShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.logo-wordmark {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #e2e8f0 35%,
+    #7dd3fc 48%,
+    #bae6fd 52%,
+    #e2e8f0 65%,
+    #e2e8f0 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wordShimmer 5s linear infinite;
+}
+
+/* Slow spin (kept for backwards compatibility) */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
+/* iOS Safari viewport fix */
+.h-dvh   { height: 100dvh; }
+.min-h-dvh { min-height: 100dvh; }
