@@ -6,9 +6,14 @@ import { Target, Disc, Activity, CloudSun, Sparkles, BookOpen } from 'lucide-rea
 interface BottomTabBarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onTabReselect?: (tab: string) => void;
 }
 
-export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, setActiveTab }) => {
+export const BottomTabBar: React.FC<BottomTabBarProps> = ({
+  activeTab,
+  setActiveTab,
+  onTabReselect,
+}) => {
   const tabs = [
     { id: 'tuner', label: 'Tuner', icon: Disc },
     { id: 'harmonics', label: 'Harmonics', icon: Activity },
@@ -27,6 +32,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, setActive
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
+    }
+    if (activeTab === tabId && onTabReselect) {
+      onTabReselect(tabId);
     }
     setActiveTab(tabId);
   };

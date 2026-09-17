@@ -12,6 +12,8 @@ interface LentzAIAdvisorProps {
   ammo?: AmmoLot;
   onApplyClick: (click: number) => void;
   isEasyMode?: boolean;
+  onClose?: () => void;
+  advisorOpenSignal?: number;
 }
 
 interface AIChatMessage {
@@ -28,6 +30,8 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
   ammo,
   onApplyClick,
   isEasyMode = false,
+  onClose,
+  advisorOpenSignal,
 }) => {
   const [messages, setMessages] = useState<AIChatMessage[]>([
     {
@@ -79,18 +83,25 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
     return () => vv.removeEventListener('resize', onViewportResize);
   }, [isFullScreen]);
 
-  // Auto-launch full-screen immediately on mobile when component mounts
+  const handleExitChat = () => {
+    setIsFullScreen(false);
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  // Auto-launch full-screen on mobile when component mounts OR when advisorOpenSignal fires
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsFullScreen(true);
     }
-  }, []);
+  }, [advisorOpenSignal]);
 
   // Handle ESC key to exit full window
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullScreen) {
-        setIsFullScreen(false);
+        handleExitChat();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -449,7 +460,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
 
             {/* Easy Exit Button — large tap target, rose color, always visible */}
             <button
-              onClick={() => setIsFullScreen(false)}
+              onClick={handleExitChat}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-500/90 hover:bg-rose-500 text-white font-extrabold text-sm border border-rose-400/60 active:scale-95 transition-all shadow-lg min-w-[44px] min-h-[44px]"
               title="Exit Full Window Mode"
             >

@@ -7,6 +7,7 @@ import { BarrelProfile, AmmoLot } from '@/types';
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onTabReselect?: (tab: string) => void;
   activeBarrel?: BarrelProfile;
   activeAmmo?: AmmoLot;
   onOpenLogbook: () => void;
@@ -19,6 +20,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
+  onTabReselect,
   activeBarrel,
   activeAmmo,
   onOpenLogbook,
@@ -151,6 +153,9 @@ export const Header: React.FC<HeaderProps> = ({
                     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
                     document.documentElement.scrollTop = 0;
                     document.body.scrollTop = 0;
+                  }
+                  if (activeTab === tab.id && onTabReselect) {
+                    onTabReselect(tab.id);
                   }
                   setActiveTab(tab.id);
                 }}

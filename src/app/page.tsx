@@ -38,6 +38,24 @@ import { analyzeHarmonics } from '@/lib/ballistics';
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('tuner');
+  const [previousTab, setPreviousTab] = useState<string>('tuner');
+  const [advisorOpenSignal, setAdvisorOpenSignal] = useState<number>(1);
+
+  const handleSwitchTab = (newTab: string) => {
+    if (newTab === 'advisor') {
+      setAdvisorOpenSignal((prev) => prev + 1);
+    }
+    if (newTab !== activeTab && activeTab !== 'advisor') {
+      setPreviousTab(activeTab);
+    }
+    setActiveTab(newTab);
+  };
+
+  const handleTabReselect = (tab: string) => {
+    if (tab === 'advisor') {
+      setAdvisorOpenSignal((prev) => prev + 1);
+    }
+  };
 
   // Easy vs Expert mode — Easy is default for new users
   const [isEasyMode, setIsEasyMode] = useState<boolean>(true);
@@ -241,10 +259,11 @@ export default function Home() {
       {/* App Header */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSwitchTab}
+        onTabReselect={handleTabReselect}
         activeBarrel={activeBarrel}
         activeAmmo={activeAmmo}
-        onOpenLogbook={() => setActiveTab('logbook')}
+        onOpenLogbook={() => handleSwitchTab('logbook')}
         onExport={handleExportJSON}
         isEasyMode={isEasyMode}
         onToggleEasyMode={toggleEasyMode}
@@ -466,9 +485,13 @@ export default function Home() {
               barrel={activeBarrel}
               ammo={activeAmmo}
               isEasyMode={isEasyMode}
+              advisorOpenSignal={advisorOpenSignal}
+              onClose={() => {
+                handleSwitchTab(previousTab && previousTab !== 'advisor' ? previousTab : 'tuner');
+              }}
               onApplyClick={(c) => {
                 setCurrentClick(c);
-                setActiveTab('tuner');
+                handleSwitchTab('tuner');
               }}
             />
           </div>
@@ -542,16 +565,20 @@ export default function Home() {
         activeTunerClick={currentClick}
         onSetTunerClick={handleSetClick}
         onNudgeTuner={handleNudgeClick}
-        onNavigateTab={(tab) => setActiveTab(tab)}
+        onNavigateTab={(tab) => handleSwitchTab(tab)}
         onAddRun={handleVoiceAddRun}
         onAskAI={(q) => {
-          setActiveTab('advisor');
+          handleSwitchTab('advisor');
         }}
         onSetTemp={handleVoiceSetTemp}
       />
 
       {/* iOS Mobile Bottom Tab Bar */}
-      <BottomTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomTabBar
+        activeTab={activeTab}
+        setActiveTab={handleSwitchTab}
+        onTabReselect={handleTabReselect}
+      />
     </div>
   );
 }
