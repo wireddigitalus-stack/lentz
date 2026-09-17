@@ -119,16 +119,37 @@ export const TunerDial: React.FC<TunerDialProps> = ({
     }
   };
 
+  // Lock page scrolling while actively dragging the rotary dial
+  useEffect(() => {
+    if (isDragging) {
+      const originalOverflow = document.body.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [isDragging]);
+
   // Pointer drag math
   const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (err) {}
     handlePointerMove(e);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging && e.buttons !== 1) return;
     if (!dialRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
 
     const rect = dialRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -153,7 +174,7 @@ export const TunerDial: React.FC<TunerDialProps> = ({
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (err) {}
   };
 
@@ -359,8 +380,10 @@ export const TunerDial: React.FC<TunerDialProps> = ({
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="relative w-64 h-64 md:w-72 md:h-72 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center p-3 shadow-2xl transition-transform active:scale-[0.99]"
+          className="relative w-64 h-64 md:w-72 md:h-72 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center p-3 shadow-2xl transition-transform active:scale-[0.99] touch-none"
           style={{
+            touchAction: 'none',
+            WebkitTouchCallout: 'none',
             background:
               'radial-gradient(circle at 30% 30%, #2A303C 0%, #171A21 55%, #0B0D12 100%)',
             boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.08), 0 20px 50px rgba(0,0,0,0.8)',

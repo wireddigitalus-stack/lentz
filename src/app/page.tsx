@@ -219,7 +219,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#08090C] selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-[#08090C] selection:bg-sky-500 selection:text-white">
       {/* App Header */}
       <Header
         activeTab={activeTab}
@@ -233,7 +233,7 @@ export default function Home() {
       />
 
       {/* Main Content Viewport with mobile bottom bar clearance */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-32 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-32 md:pb-8 overflow-x-hidden">
         {/* TAB 1: TUNER ROTARY DIAL */}
         {activeTab === 'tuner' && (
           <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto">

@@ -7,13 +7,25 @@
   --foreground: #F8FAFC;
 }
 
+html {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  max-width: 100vw;
+  position: relative;
 }
 
 /* Custom scrollbars for macOS / iOS feel */
