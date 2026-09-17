@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Sparkles, Activity, CheckCircle, AlertTriangle, HelpCircle, ArrowRight, Bot, MessageSquare, Send, Maximize2, Minimize2, X } from 'lucide-react';
-import { TuneSession, BarrelProfile, AmmoLot } from '@/types';
+import { TuneSession, BarrelProfile, AmmoLot, EnvironmentalConditions } from '@/types';
 import { analyzeHarmonics, calculateThermalOffset, calculateAllPurdyModes, velocityToStartingClick, chaconReferenceNumber } from '@/lib/ballistics';
+import { generateExpertResponse, getSmartQuickAsks, getThinkingLabel, ExpertContext } from '@/lib/tunerExpertEngine';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 
 interface LentzAIAdvisorProps {
@@ -14,6 +15,8 @@ interface LentzAIAdvisorProps {
   isEasyMode?: boolean;
   onClose?: () => void;
   advisorOpenSignal?: number;
+  currentClick?: number;
+  onUpdateEnvironment?: (env: EnvironmentalConditions) => void;
 }
 
 interface AIChatMessage {
@@ -32,46 +35,75 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
   isEasyMode = false,
   onClose,
   advisorOpenSignal,
+  currentClick = 13,
+  onUpdateEnvironment,
 }) => {
-  const [messages, setMessages] = useState<AIChatMessage[]>([
-    {
-      id: 'init-1',
-      sender: 'assistant',
-      text: `Hello! I am your Lentz Precision Ballistics & Harmonic Advisor. I'm actively monitoring your ${barrel?.name || 'custom rimfire rifle'} firing ${ammo?.brand || 'Lapua'} ${ammo?.model || 'Center-X'} (Lot #${ammo?.lotNumber || '31554'}). How can I assist your tuning session today?`,
-      timestamp: 'Just now',
-      actions: [
-        { label: 'Diagnose Sweet Spot Quality' },
-        { label: 'Check Thermal Drift for Relay 2' },
-        { label: 'Explain PRX Positive Compensation' },
-      ],
-    },
-  ]);
-
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [thinkingLabel, setThinkingLabel] = useState('Analyzing...');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [quickAsks, setQuickAsks] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fullScreenInputRef = useRef<HTMLInputElement | null>(null);
-  // Ref to the scrollable messages container for reliable iOS Safari scroll
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Reliable bottom scroll: use scrollTop = scrollHeight instead of scrollIntoView
-  // which fails on iOS Safari when the virtual keyboard is open inside a fixed container
+  // Build the expert context
+  const expertContext: ExpertContext = {
+    session,
+    barrel,
+    ammo,
+    currentClick,
+  };
+
+  // Smart initial greeting — context-aware
+  useEffect(() => {
+    const runs = session.runs || [];
+    const ha = runs.length > 0 ? analyzeHarmonics(runs) : null;
+
+    let statusLine = '';
+    if (ha && runs.length > 0) {
+      statusLine = `Your sweet spot is at Click ${ha.sweetSpotClick} with ${ha.minVerticalInches}" vertical across ${runs.length} test runs. Current tuner position: Click ${currentClick}.`;
+    } else {
+      statusLine = 'No test runs recorded yet — I can calculate your starting click using the Purdy Method when you\'re ready.';
+    }
+
+    const greeting: AIChatMessage = {
+      id: 'init-1',
+      sender: 'assistant',
+      text: `Hello! I'm your **Lentz Precision Ballistics & Harmonic Advisor**. I'm actively monitoring your **${barrel?.name || 'custom rimfire rifle'}** shooting **${ammo?.brand || 'Lapua'} ${ammo?.model || 'Center-X'}** (Lot #${ammo?.lotNumber || '—'}).\n\n${statusLine}\n\nI can fetch **live weather data**, compute thermal drift, analyze your harmonic nodes, and help you prep for matches. What would you like to know?`,
+      timestamp: 'Just now',
+      actions: [
+        { label: 'What\'s the weather right now?' },
+        { label: 'Diagnose Sweet Spot Quality' },
+        { label: 'What click should I start at?' },
+      ],
+    };
+
+    setMessages([greeting]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Compute smart Quick Ask suggestions
+  useEffect(() => {
+    setQuickAsks(getSmartQuickAsks(expertContext));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.environment.tempF, session.environment.windSpeedMph, session.runs?.length, currentClick]);
+
+  // Reliable bottom scroll
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   };
 
-  // Scroll to bottom whenever messages change, thinking state changes, or full-screen opens
   useEffect(() => {
-    // Small delay allows DOM to paint the new message before measuring scrollHeight
     const t = setTimeout(scrollToBottom, 60);
     return () => clearTimeout(t);
   }, [messages, isThinking, isFullScreen]);
 
-  // Re-scroll when iOS virtual keyboard opens/closes (changes visualViewport height)
+  // Re-scroll on iOS virtual keyboard resize
   useEffect(() => {
     if (!isFullScreen) return;
     const vv = window.visualViewport;
@@ -83,21 +115,21 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
     return () => vv.removeEventListener('resize', onViewportResize);
   }, [isFullScreen]);
 
-  const handleExitChat = () => {
+  const handleExitChat = useCallback(() => {
     setIsFullScreen(false);
     if (onClose) {
       onClose();
     }
-  };
+  }, [onClose]);
 
-  // Auto-launch full-screen on mobile when component mounts OR when advisorOpenSignal fires
+  // Auto-launch full-screen on mobile
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsFullScreen(true);
     }
   }, [advisorOpenSignal]);
 
-  // Handle ESC key to exit full window
+  // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullScreen) {
@@ -106,12 +138,12 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullScreen]);
+  }, [isFullScreen, handleExitChat]);
 
   const runs = session.runs || [];
   const harmonicAnalysis = analyzeHarmonics(runs);
 
-  // Synthesize domain-expert ballistic analysis
+  // Diagnostics for the side panel
   const runDiagnostics = () => {
     const sweetSpot = harmonicAnalysis.sweetSpotClick;
     const window = harmonicAnalysis.forgivingWindow;
@@ -142,7 +174,8 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
 
   const diagnostics = runDiagnostics();
 
-  const handleSendMessage = (textToSend?: string) => {
+  // ─── SMART MESSAGE HANDLER — uses expert engine ───────────────────────────
+  const handleSendMessage = async (textToSend?: string) => {
     const q = textToSend || inputQuery;
     if (!q.trim()) return;
 
@@ -155,52 +188,41 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
 
     setMessages((prev) => [...prev, userMsg]);
     setInputQuery('');
+    setThinkingLabel(getThinkingLabel(q));
     setIsThinking(true);
 
-    setTimeout(() => {
-      let reply = '';
-      let actions: { label: string; clickValue?: number }[] | undefined = undefined;
+    try {
+      const response = await generateExpertResponse(q, expertContext);
 
-      const lower = q.toLowerCase();
-
-      if (lower.includes('sweet spot') || lower.includes('diagnose')) {
-        reply = `**Harmonic Evaluation for ${barrel?.name || 'Lentz 2500X'}:**\n\n• **Sweet Spot Locked**: **${diagnostics.sweetSpot} Clicks** (Vertical: ${diagnostics.minVert}")\n• **Forgiving Window**: **${diagnostics.window.startClick}c to ${diagnostics.window.endClick}c** (${diagnostics.windowWidth} clicks wide)\n\n**Verdict**: Your Shilen 5R barrel is parked in a stable harmonic valley. Slower bullets exiting later are receiving optimal upward launch compensation. You are ready to shoot match cards with Lot #${ammo?.lotNumber || '31554'}.`;
-        actions = [{ label: `Dial to ${diagnostics.sweetSpot} Clicks`, clickValue: diagnostics.sweetSpot }];
-      } else if (lower.includes('thermal') || lower.includes('weather') || lower.includes('relay')) {
-        const thermal = calculateThermalOffset(72, session.environment.tempF, diagnostics.sweetSpot);
-        reply = `**Thermal Drift Assessment**:\n\n• **Baseline Temp**: 72°F\n• **Current Station Temp**: ${session.environment.tempF}°F (Δ ${thermal.deltaTempF >= 0 ? '+' : ''}${thermal.deltaTempF}°F)\n• **Density Altitude**: ${session.environment.densityAltitudeFt} ft\n\n**Recommendation**: ${thermal.explanation}\n\n**Adjust tuner setting to ${thermal.recommendedClick} clicks** (${thermal.clickAdjustment >= 0 ? '+' : ''}${thermal.clickAdjustment} clicks shift).`;
-        actions = [{ label: `Apply Thermal Shift (${thermal.recommendedClick} Clicks)`, clickValue: thermal.recommendedClick }];
-      } else if (lower.includes('prx') || lower.includes('positive compensation') || lower.includes('physics')) {
-        reply = `**The Physics of .22 LR Positive Compensation:**\n\nBecause .22 LR match ammo is factory primed and cannot be handloaded, every box has an Extreme Spread (ES) of 12–25 fps. When un-tuned, a slow bullet drops more and hits low at 50 yards.\n\nA **Lentz Barrel Tuner** changes the barrel's resonant wave so that the bullet exits while the muzzle is swinging *upward*. Slower rounds take microseconds longer to reach the crown, exiting higher on the wave—landing at the exact same point of impact as faster rounds!`;
-      } else if (lower.includes('double') || lower.includes('tear') || lower.includes('hole')) {
-        reply = `**Target Paper Tear & Double-Hole Analysis**:\n\nWhen shooting ARA 2500 cards or PSL 5-shot squares, cardstock backing fibers can tear irregularly. In our Target CV module, always verify the dark outer **bullet wipe ring** (graphite lubricant ring). If a group shows 4 holes instead of 5, inspect for a figure-8 oval wipe ring with the 3x Magnifier Loupe to split the overlapping shots.`;
-      } else if (lower.includes('purdy') || lower.includes('tuner dimension') || lower.includes('starting click') || lower.includes('start click') || lower.includes('chacon') || lower.includes('what click')) {
-        const purdyModes = barrel ? calculateAllPurdyModes(barrel.lengthInches, barrel.muzzleDiameterInches, 'jmp') : null;
-        const ninthMode = purdyModes?.find((m) => m.mode === 'ninth');
-        const ammoVelocity = ammo?.measuredAvgFps ?? ammo?.boxMuzzleVelocityFps;
-        const velClick = ammoVelocity ? velocityToStartingClick(ammoVelocity) : null;
-        const chacon = barrel ? chaconReferenceNumber(barrel.lengthInches) : null;
-        reply = `**Purdy Method 4 — Lentz Tuner Calculation${barrel ? ` for ${barrel.name}` : ''}:**\n\n` +
-          (ninthMode ? `• **Target Tuner Dimension (9th Harmonic, JMP)**: **${ninthMode.tunerDimensionInches.toFixed(3)}"**\n  Resonant Length: ${ninthMode.resonantLength.toFixed(3)}" | End Corr: ${ninthMode.endCorrection.toFixed(3)}"\n\n` : '') +
-          (chacon ? `• **Chacon Reference Number** (${barrel?.lengthInches}" barrel): **${chacon.toFixed(3)}"**\n\n` : '') +
-          (velClick && ammoVelocity ? `• **Velocity → Click**: At **${ammoVelocity} fps** (${ammo?.brand} ${ammo?.model}), start at **Click ${velClick.clicks}** (Lentz range table)\n\n` : '') +
-          `**Formula**: TunerDim = (BarrelLen × 9/8) − BarrelLen − (MuzzleOD × 0.264)\n\nUse the **Purdy Method 4** tab inside Harmonics to see all 5 harmonic modes and adjust correction method (JMP/Chacon/Purdy). The Purdy target dimension gives you where to start before empirical testing.`;
-        actions = velClick ? [{ label: `Set Dial to Click ${velClick.clicks}`, clickValue: velClick.clicks }] : undefined;
-      } else {
-        reply = `Understood. In precision rimfire benchrest, remember: **wind creates horizontal spread, but the tuner creates vertical suppression**. If you see horizontal elongation with tight vertical, do not move the tuner—read your wind flags instead! What other ballistic data would you like me to analyze?`;
+      // Sync weather data back to the app if the engine fetched it
+      if (response.updatedEnvironment && onUpdateEnvironment) {
+        const updatedEnv: EnvironmentalConditions = {
+          ...session.environment,
+          ...response.updatedEnvironment,
+        };
+        onUpdateEnvironment(updatedEnv);
       }
 
       const aiMsg: AIChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'assistant',
-        text: reply,
+        text: response.text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        actions,
+        actions: response.actions,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+    } catch (err) {
+      const errorMsg: AIChatMessage = {
+        id: `ai-err-${Date.now()}`,
+        sender: 'assistant',
+        text: 'I encountered an issue processing your question. Please try asking again, or check your internet connection for weather-related queries.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
       setIsThinking(false);
-    }, 600);
+    }
   };
 
   return (
@@ -268,13 +290,13 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
           )}
         </div>
 
-        {/* Practical AI Capabilities Overview */}
+        {/* Expert Capabilities Overview */}
         <div className="bg-[#10131A]/90 border border-white/10 rounded-2xl p-5 backdrop-blur-xl text-sm text-neutral-200 flex flex-col gap-2 shadow-glass">
           <span className="text-xs font-mono uppercase text-sky-300 font-bold tracking-wider">
-            No Gimmicks: Real Ballistic Utility
+            Expert Advisor — Live Data & Ballistics Engine
           </span>
           <p className="leading-relaxed font-medium">
-            Unlike generic AI, the Lentz Harmonic Advisor operates directly on physical rimfire wave equations, .224&quot; graphite smudge detection, and thermal modulus shift rules for 416R barrel steel.
+            Powered by real-time Open-Meteo weather, Purdy Method 4 harmonics, ISA density altitude, thermal drift compensation, and Lentz velocity-to-click tables. Ask me anything about tuning, weather, or match prep.
           </p>
         </div>
       </div>
@@ -288,8 +310,8 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
               <Bot className="w-5 h-5 text-sky-400" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Ballistics &amp; Tuning Consultation</h4>
-              <span className="text-xs text-emerald-400 font-mono font-semibold">● Online &bull; Active Context</span>
+              <h4 className="text-sm font-bold text-white">Ballistics & Tuning Expert</h4>
+              <span className="text-xs text-emerald-400 font-mono font-semibold">● Online &bull; Live Weather &bull; 20+ Topics</span>
             </div>
           </div>
 
@@ -352,7 +374,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
           {isThinking && (
             <div className="flex items-center gap-2 text-neutral-300 text-sm italic">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping"></span>
-              <span>Analyzing harmonic wave equations...</span>
+              <span>{thinkingLabel}</span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -375,7 +397,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                 <p className="text-base font-bold text-white">Tap the mic and speak</p>
                 <p className="text-sm text-neutral-400">Ask any tuning question out loud</p>
                 <p className="text-xs font-mono text-neutral-500 italic mt-1">
-                  "What click should I start at?" · "Am I in the sweet spot?"
+                  &quot;What click should I start at?&quot; · &quot;How&apos;s the weather?&quot;
                 </p>
               </div>
             </div>
@@ -412,7 +434,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Ask about sweet spot, weather drift, or target paper tears..."
+              placeholder="Ask about weather, sweet spot, thermal drift, match prep..."
               className="flex-1 bg-neutral-950 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-400 focus:outline-none focus:border-sky-500 font-medium"
             />
             <VoiceInputButton
@@ -420,7 +442,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                 setInputQuery(spokenText);
                 handleSendMessage(spokenText);
               }}
-              title="Dictate question to Jeremiah Lentz AI"
+              title="Dictate question to Lentz Expert Advisor"
               className="shrink-0"
             />
             <button
@@ -446,19 +468,19 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-extrabold text-white tracking-tight">
-                    Lentz Ballistics Advisor
+                    Lentz Expert Advisor
                   </h3>
                   <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                    ONLINE
+                    LIVE
                   </span>
                 </div>
                 <p className="text-xs text-neutral-300 truncate max-w-[200px] sm:max-w-none font-medium">
-                  Monitoring: {barrel?.name || 'Lentz Custom 2500X'}
+                  {barrel?.name || 'Lentz Custom 2500X'} • Live Weather • 20+ Topics
                 </p>
               </div>
             </div>
 
-            {/* Easy Exit Button — large tap target, rose color, always visible */}
+            {/* Easy Exit Button */}
             <button
               onClick={handleExitChat}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-500/90 hover:bg-rose-500 text-white font-extrabold text-sm border border-rose-400/60 active:scale-95 transition-all shadow-lg min-w-[44px] min-h-[44px]"
@@ -469,7 +491,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
             </button>
           </div>
 
-          {/* Full-Height Messages Stream — containerRef enables reliable iOS Safari scroll */}
+          {/* Full-Height Messages Stream */}
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 max-w-4xl mx-auto w-full font-sans">
 
             {messages.map((m) => (
@@ -517,23 +539,17 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
             {isThinking && (
               <div className="flex items-center gap-2 text-neutral-300 text-sm md:text-base italic">
                 <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping"></span>
-                <span>Synthesizing rimfire wave mechanics &amp; node diagnostics...</span>
+                <span>{thinkingLabel}</span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Questions Suggested Bar — strictly constrained to viewport with smooth touch pan */}
+          {/* Smart Quick Ask Bar — context-aware suggestions */}
           <div className="w-full max-w-full min-w-0 border-t border-white/10 bg-[#0D1017] shrink-0 overflow-hidden">
             <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar flex items-center gap-2 px-3 sm:px-4 py-2.5 touch-pan-x">
               <span className="text-xs font-mono font-bold text-sky-400 shrink-0">Quick Ask:</span>
-              {[
-                'Diagnose Sweet Spot Quality',
-                'Check Thermal Drift for Relay 2',
-                'Explain PRX Positive Compensation',
-                'Target Paper Tear & Double-Hole Analysis',
-                'Wind vs Vertical Diagnosis',
-              ].map((txt) => (
+              {quickAsks.map((txt) => (
                 <button
                   key={txt}
                   onClick={() => handleSendMessage(txt)}
@@ -545,7 +561,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
             </div>
           </div>
 
-          {/* Pinned Bottom Input Bar — directly right above mobile bottom nav */}
+          {/* Pinned Bottom Input Bar */}
           <div className="w-full max-w-full min-w-0 p-3 sm:p-4 border-t border-white/15 bg-[#10131A] shrink-0 shadow-lg">
             <form
               onSubmit={(e) => {
@@ -559,7 +575,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                 type="text"
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                placeholder="Type or dictate your ballistics question..."
+                placeholder="Ask about weather, tuning, match prep..."
                 className="flex-1 min-w-0 bg-neutral-950 border border-white/25 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm sm:text-base text-white placeholder-neutral-400 focus:outline-none focus:border-sky-500 font-medium shadow-inner"
                 autoFocus
               />
@@ -568,7 +584,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                   setInputQuery(spokenText);
                   handleSendMessage(spokenText);
                 }}
-                title="Dictate question to Jeremiah Lentz AI"
+                title="Dictate question to Lentz Expert Advisor"
                 className="shrink-0 p-3 sm:p-3.5 rounded-2xl"
               />
               <button

@@ -472,10 +472,10 @@ export default function Home() {
             {!isEasyMode && (
               <div>
                 <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-                  Lentz Precision Ballistic Advisor
+                  Lentz Expert Ballistic Advisor
                 </h2>
                 <p className="text-xs md:text-sm text-neutral-300 font-medium">
-                  Domain-specific rimfire harmonic diagnostic engine &amp; paper tear / double-hole consultant
+                  Live weather &bull; 20+ tuning topics &bull; Purdy Method 4 &bull; Thermal drift compensation
                 </p>
               </div>
             )}
@@ -486,6 +486,8 @@ export default function Home() {
               ammo={activeAmmo}
               isEasyMode={isEasyMode}
               advisorOpenSignal={advisorOpenSignal}
+              currentClick={currentClick}
+              onUpdateEnvironment={handleUpdateEnvironment}
               onClose={() => {
                 handleSwitchTab(previousTab && previousTab !== 'advisor' ? previousTab : 'tuner');
               }}
