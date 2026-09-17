@@ -11,6 +11,7 @@ import { LentzAIAdvisor } from '@/components/LentzAIAdvisor';
 import { BottomTabBar } from '@/components/BottomTabBar';
 import { BenchVoiceHUD } from '@/components/BenchVoiceHUD';
 import { ChronoImportCard } from '@/components/ChronoImportCard';
+import { JMPQuickCalculator } from '@/components/JMPQuickCalculator';
 
 import { BarrelProfile, AmmoLot, TuneSession, TuneRun, EnvironmentalConditions } from '@/types';
 import {
@@ -256,6 +257,26 @@ export default function Home() {
               )}
             </div>
 
+            {/* ⚡ JMP TUNER CALCULATOR — Front & Center */}
+            <div className="w-full">
+              <JMPQuickCalculator
+                barrel={activeBarrel}
+                activeAmmo={activeAmmo}
+                activeTunerClick={currentClick}
+                onApplyClick={handleSetClick}
+                onSaveBarrelSetting={(click, isTube) => {
+                  if (activeBarrel) {
+                    saveBarrel({
+                      ...activeBarrel,
+                      tunerSetting: !isTube ? click : activeBarrel.tunerSetting,
+                      tunerWithTubeSetting: isTube ? click : activeBarrel.tunerWithTubeSetting,
+                    });
+                    refreshData();
+                  }
+                }}
+              />
+            </div>
+
             <div className="w-full">
               <TunerDial
                 currentClick={currentClick}
@@ -271,19 +292,19 @@ export default function Home() {
             </div>
 
             {/* Quick action bar */}
-            <div className="w-full grid grid-cols-2 gap-3.5">
-              <button
-                onClick={() => setActiveTab('scanner')}
-                className="py-3.5 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/15 text-white text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
-              >
-                <span>Scan Target at {currentClick} Clicks</span>
-              </button>
-
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <button
                 onClick={() => setActiveTab('harmonics')}
                 className="py-3.5 px-4 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
               >
-                <span>View Harmonic Curve</span>
+                <span>View Full Harmonic Curve</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('weather')}
+                className="py-3.5 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/15 text-white text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
+              >
+                <span>Weather &amp; Density Altitude</span>
               </button>
             </div>
           </div>

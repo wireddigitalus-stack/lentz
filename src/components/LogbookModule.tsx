@@ -295,6 +295,39 @@ export const LogbookModule: React.FC<LogbookModuleProps> = ({
               </div>
 
               <div>
+                <label className="text-sm font-bold text-neutral-200 block mb-1.5">Grooves (e.g. 8-Groove / 5R)</label>
+                <input
+                  type="text"
+                  value={newBarrel.grooves || ''}
+                  onChange={(e) => setNewBarrel({ ...newBarrel, grooves: e.target.value })}
+                  placeholder="8-Groove, 5R, Ratchet"
+                  className="w-full bg-neutral-950 border border-white/20 rounded-xl px-3.5 py-2.5 text-sm text-white font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-neutral-200 block mb-1.5">Tuner Setting (Clicks)</label>
+                <input
+                  type="number"
+                  value={newBarrel.tunerSetting ?? ''}
+                  onChange={(e) => setNewBarrel({ ...newBarrel, tunerSetting: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="e.g. 26"
+                  className="w-full bg-neutral-950 border border-white/20 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-neutral-200 block mb-1.5">Tuner w/ Tube Setting</label>
+                <input
+                  type="number"
+                  value={newBarrel.tunerWithTubeSetting ?? ''}
+                  onChange={(e) => setNewBarrel({ ...newBarrel, tunerWithTubeSetting: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="e.g. 24"
+                  className="w-full bg-neutral-950 border border-white/20 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono font-bold"
+                />
+              </div>
+
+              <div>
                 <label className="text-sm font-bold text-neutral-200 block mb-1.5">Tuner Weight (oz)</label>
                 <input
                   type="number"
@@ -395,8 +428,15 @@ export const LogbookModule: React.FC<LogbookModuleProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-3.5 p-2.5 rounded-xl bg-neutral-900/70 border border-white/5 text-xs text-neutral-200">
-                      <strong className="text-white">Tuner:</strong> {b.tunerModel} ({b.tunerWeightOz} oz)
+                    <div className="mt-3.5 p-2.5 rounded-xl bg-neutral-900/70 border border-white/5 text-xs text-neutral-200 flex flex-col gap-1">
+                      <div><strong className="text-white">Tuner:</strong> {b.tunerModel} ({b.tunerWeightOz} oz)</div>
+                      {(b.grooves || b.tunerSetting !== undefined || b.tunerWithTubeSetting !== undefined) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 pt-1.5 border-t border-white/5 font-mono text-[11px]">
+                          {b.grooves && <span className="text-neutral-300">Grooves: <strong className="text-white">{b.grooves}</strong></span>}
+                          {b.tunerSetting !== undefined && <span className="text-sky-300">Tuner: <strong className="text-sky-200">Click {b.tunerSetting}</strong></span>}
+                          {b.tunerWithTubeSetting !== undefined && <span className="text-emerald-300">w/ Tube: <strong className="text-emerald-200">Click {b.tunerWithTubeSetting}</strong></span>}
+                        </div>
+                      )}
                     </div>
 
                     {/* Purdy Method 4 target dimension */}

@@ -21,6 +21,9 @@ export interface BarrelProfile {
   tunerModel: TunerType;
   tunerWeightOz: number;
   totalRounds: number;
+  grooves?: string; // e.g. "8-Groove", "5R", "Ratchet"
+  tunerSetting?: number; // baseline tuner setting clicks
+  tunerWithTubeSetting?: number; // tuner with bloop tube setting clicks
   notes?: string;
   createdAt: string;
 }
