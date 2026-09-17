@@ -425,7 +425,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
 
       {/* DEDICATED FULL WINDOW CHAT MODAL FOR MOBILE & TABLET */}
       {isFullScreen && (
-        <div className="fixed inset-x-0 top-0 bottom-[calc(78px+env(safe-area-inset-bottom,0px))] md:bottom-0 md:inset-0 z-50 bg-[#08090C] flex flex-col animate-fadeIn">
+        <div className="fixed inset-x-0 top-0 bottom-[calc(78px+env(safe-area-inset-bottom,0px))] md:bottom-0 md:inset-0 z-50 bg-[#08090C] flex flex-col animate-fadeIn overflow-hidden w-full max-w-full">
           {/* Top Bar with Prominent Easy Exit Button */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#10131A] shadow-md shrink-0">
             <div className="flex items-center gap-3">
@@ -512,34 +512,36 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Questions Suggested Bar */}
-          <div className="px-4 py-2.5 border-t border-white/10 bg-[#0D1017] overflow-x-auto no-scrollbar flex items-center gap-2 shrink-0">
-            <span className="text-xs font-mono font-bold text-sky-400 shrink-0">Quick Ask:</span>
-            {[
-              'Diagnose Sweet Spot Quality',
-              'Check Thermal Drift for Relay 2',
-              'Explain PRX Positive Compensation',
-              'Target Paper Tear & Double-Hole Analysis',
-              'Wind vs Vertical Diagnosis',
-            ].map((txt) => (
-              <button
-                key={txt}
-                onClick={() => handleSendMessage(txt)}
-                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/15 text-sm text-neutral-200 font-semibold whitespace-nowrap transition-colors active:scale-95"
-              >
-                {txt}
-              </button>
-            ))}
+          {/* Quick Questions Suggested Bar — strictly constrained to viewport with smooth touch pan */}
+          <div className="w-full max-w-full min-w-0 border-t border-white/10 bg-[#0D1017] shrink-0 overflow-hidden">
+            <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar flex items-center gap-2 px-3 sm:px-4 py-2.5 touch-pan-x">
+              <span className="text-xs font-mono font-bold text-sky-400 shrink-0">Quick Ask:</span>
+              {[
+                'Diagnose Sweet Spot Quality',
+                'Check Thermal Drift for Relay 2',
+                'Explain PRX Positive Compensation',
+                'Target Paper Tear & Double-Hole Analysis',
+                'Wind vs Vertical Diagnosis',
+              ].map((txt) => (
+                <button
+                  key={txt}
+                  onClick={() => handleSendMessage(txt)}
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-neutral-900/90 hover:bg-neutral-800 active:bg-neutral-700 border border-white/15 text-xs sm:text-sm text-neutral-200 font-semibold whitespace-nowrap transition-colors active:scale-95 shadow-sm"
+                >
+                  {txt}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Pinned Bottom Input Bar — directly right above mobile bottom nav */}
-          <div className="p-3 sm:p-4 border-t border-white/15 bg-[#10131A] shrink-0 shadow-lg">
+          <div className="w-full max-w-full min-w-0 p-3 sm:p-4 border-t border-white/15 bg-[#10131A] shrink-0 shadow-lg">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage();
               }}
-              className="max-w-4xl mx-auto flex items-center gap-3"
+              className="max-w-4xl mx-auto flex items-center gap-2.5 sm:gap-3 w-full min-w-0"
             >
               <input
                 ref={fullScreenInputRef}
@@ -547,7 +549,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
                 placeholder="Type or dictate your ballistics question..."
-                className="flex-1 bg-neutral-950 border border-white/25 rounded-2xl px-5 py-3.5 text-base text-white placeholder-neutral-400 focus:outline-none focus:border-sky-500 font-medium shadow-inner"
+                className="flex-1 min-w-0 bg-neutral-950 border border-white/25 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-sm sm:text-base text-white placeholder-neutral-400 focus:outline-none focus:border-sky-500 font-medium shadow-inner"
                 autoFocus
               />
               <VoiceInputButton
@@ -556,12 +558,12 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
                   handleSendMessage(spokenText);
                 }}
                 title="Dictate question to Jeremiah Lentz AI"
-                className="shrink-0 p-3.5 rounded-2xl"
+                className="shrink-0 p-3 sm:p-3.5 rounded-2xl"
               />
               <button
                 type="submit"
                 disabled={!inputQuery.trim()}
-                className="p-3.5 rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shadow-md shrink-0 flex items-center justify-center"
+                className="p-3 sm:p-3.5 rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shadow-md shrink-0 flex items-center justify-center"
               >
                 <Send className="w-5 h-5" />
               </button>
