@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Camera, Zap, CheckCircle, Loader2, X, Mic } from 'lucide-react';
+import { Camera, Zap, CheckCircle, Loader2, X, Mic, FileText, Upload } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { velocityToStartingClick } from '@/lib/ballistics';
 
@@ -10,6 +10,7 @@ interface ChronoResult {
   extremeSpread: number;
   stdDev: number;
   shots: number;
+  sessionName?: string;
 }
 
 interface ChronoImportCardProps {
@@ -27,6 +28,7 @@ export const ChronoImportCard: React.FC<ChronoImportCardProps> = ({
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
   const [applied, setApplied] = useState(false);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
 
   const [avgVelocity, setAvgVelocity] = useState('');
   const [extremeSpread, setExtremeSpread] = useState('');
@@ -34,10 +36,99 @@ export const ChronoImportCard: React.FC<ChronoImportCardProps> = ({
   const [shots, setShots] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Derived starting click from Lentz velocity table
   const parsedVel = parseFloat(avgVelocity);
   const suggestedClick = !isNaN(parsedVel) && parsedVel > 0 ? velocityToStartingClick(parsedVel) : null;
+
+  // ── Garmin ShotView CSV Parser ─────────────────────────────────────────
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanError('');
+    setCsvFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = (event.target?.result as string) || '';
+        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+        let parsedAvg: number | null = null;
+        let parsedES: number | null = null;
+        let parsedSD: number | null = null;
+        let parsedCount: number | null = null;
+        const individualVelocities: number[] = [];
+
+        // Scan header key-value rows or table columns
+        for (const line of lines) {
+          const lower = line.toLowerCase();
+
+          // 1. Check for Summary Stats Rows (common in Garmin ShotView exports)
+          if (lower.includes('average') || lower.includes('avg velocity') || lower.includes('mean')) {
+            const match = line.match(/(?:average|avg velocity|mean)[^,\d]*[:,\t\s]+([\d.]+)/i);
+            if (match) parsedAvg = parseFloat(match[1]);
+          }
+          if (lower.includes('spread') || lower.includes('extreme spread') || lower.includes('es')) {
+            const match = line.match(/(?:extreme spread|spread|es)[^,\d]*[:,\t\s]+([\d.]+)/i);
+            if (match) parsedES = parseFloat(match[1]);
+          }
+          if (lower.includes('std dev') || lower.includes('standard deviation') || lower.includes('sd')) {
+            const match = line.match(/(?:std dev|standard deviation|sd)[^,\d]*[:,\t\s]+([\d.]+)/i);
+            if (match) parsedSD = parseFloat(match[1]);
+          }
+          if (lower.includes('total shots') || lower.includes('shot count') || lower.includes('shots:')) {
+            const match = line.match(/(?:total shots|shot count|shots)[^,\d]*[:,\t\s]+(\d+)/i);
+            if (match) parsedCount = parseInt(match[1], 10);
+          }
+
+          // 2. Also look for individual shot table rows e.g. "1, 1054.2"
+          const cols = line.split(/[,\t]/).map((c) => c.replace(/"/g, '').trim());
+          if (cols.length >= 2) {
+            const shotNum = parseInt(cols[0], 10);
+            const velVal = parseFloat(cols[1]);
+            // If row starts with shot index (1, 2, 3...) and second col is a realistic velocity (800 - 4500 fps)
+            if (!isNaN(shotNum) && !isNaN(velVal) && velVal > 600 && velVal < 5000) {
+              individualVelocities.push(velVal);
+            }
+          }
+        }
+
+        // If individual shot rows exist, compute exact statistics if summary wasn't provided
+        if (individualVelocities.length > 0) {
+          if (!parsedCount) parsedCount = individualVelocities.length;
+          if (!parsedAvg) {
+            const sum = individualVelocities.reduce((a, b) => a + b, 0);
+            parsedAvg = Number((sum / individualVelocities.length).toFixed(1));
+          }
+          if (!parsedES) {
+            const max = Math.max(...individualVelocities);
+            const min = Math.min(...individualVelocities);
+            parsedES = Number((max - min).toFixed(1));
+          }
+          if (!parsedSD) {
+            const avg = parsedAvg;
+            const variance = individualVelocities.reduce((acc, v) => acc + Math.pow(v - avg, 2), 0) / (individualVelocities.length > 1 ? individualVelocities.length - 1 : 1);
+            parsedSD = Number(Math.sqrt(variance).toFixed(1));
+          }
+        }
+
+        if (parsedAvg) setAvgVelocity(String(parsedAvg));
+        if (parsedES) setExtremeSpread(String(parsedES));
+        if (parsedSD) setStdDev(String(parsedSD));
+        if (parsedCount) setShots(String(parsedCount));
+
+        if (!parsedAvg && !parsedES && !parsedSD && individualVelocities.length === 0) {
+          setScanError('CSV detected, but no recognizable velocity columns found. Check Garmin export format.');
+        }
+      } catch (err: any) {
+        setScanError('Failed to parse Garmin CSV file. Try photo scan or manual entry.');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // ── Photo scan via Gemini Vision API ──────────────────────────────────
   const handlePhotoScan = async (file: File) => {
@@ -141,19 +232,32 @@ export const ChronoImportCard: React.FC<ChronoImportCardProps> = ({
             </button>
           </div>
 
-          {/* Photo scan button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={scanning}
-            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-gradient-to-r from-violet-500/20 to-sky-500/20 border border-violet-500/30 hover:from-violet-500/30 hover:to-sky-500/30 text-white font-bold text-sm transition-all active:scale-[0.98] mb-4 disabled:opacity-50"
-          >
-            {scanning ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Reading photo with AI…</>
-            ) : (
-              <><Camera className="w-5 h-5 text-violet-300" /> 📷 Scan Screen or Notebook Photo</>
-            )}
-          </button>
+          {/* Action Row: Photo scan + Garmin CSV upload */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+            {/* Photo scan button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={scanning}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl bg-gradient-to-r from-violet-500/20 to-sky-500/20 border border-violet-500/30 hover:from-violet-500/30 hover:to-sky-500/30 text-white font-bold text-xs md:text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {scanning ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Reading with AI…</>
+              ) : (
+                <><Camera className="w-4 h-4 text-violet-300" /> 📷 Photo Scan Screen</>
+              )}
+            </button>
 
+            {/* Garmin ShotView CSV upload button */}
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-sky-500/20 border border-emerald-500/30 hover:from-emerald-500/30 hover:to-sky-500/30 text-white font-bold text-xs md:text-sm transition-all active:scale-[0.98]"
+            >
+              <FileText className="w-4 h-4 text-emerald-300" />
+              <span>📂 Import Garmin CSV</span>
+            </button>
+          </div>
+
+          {/* Hidden file inputs */}
           <input
             ref={fileInputRef}
             type="file"
@@ -165,6 +269,21 @@ export const ChronoImportCard: React.FC<ChronoImportCardProps> = ({
               if (file) handlePhotoScan(file);
             }}
           />
+
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv,text/plain"
+            className="hidden"
+            onChange={handleCSVUpload}
+          />
+
+          {csvFileName && (
+            <div className="mb-3 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-mono text-emerald-300">
+              <span className="truncate">Loaded: {csvFileName}</span>
+              <span className="text-emerald-400 font-bold">✓ Parsed</span>
+            </div>
+          )}
 
           {scanError && (
             <p className="text-sm text-amber-400 mb-3 text-center font-medium">{scanError}</p>
