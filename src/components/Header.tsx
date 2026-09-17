@@ -113,7 +113,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile Right Controls */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Easy / Expert mode toggle */}
+            <button
+              onClick={onOpenLogbook}
+              className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-neutral-900 border border-white/15 text-neutral-200 active:scale-95 shadow-sm"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="truncate max-w-[80px] font-mono text-xs text-neutral-100">
+                {activeBarrel ? activeBarrel.serialNumber : 'Barrels'}
+              </span>
+            </button>
+
+            {/* Easy / Expert mode toggle — far right on mobile */}
             <button
               onClick={onToggleEasyMode}
               className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border active:scale-95 shadow-sm transition-all ${
@@ -124,16 +134,6 @@ export const Header: React.FC<HeaderProps> = ({
               title={isEasyMode ? 'Switch to Expert Mode' : 'Switch to Easy Mode'}
             >
               {isEasyMode ? '🟢 Easy' : '⚙️ Expert'}
-            </button>
-
-            <button
-              onClick={onOpenLogbook}
-              className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-neutral-900 border border-white/15 text-neutral-200 active:scale-95 shadow-sm"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="truncate max-w-[80px] font-mono text-xs text-neutral-100">
-                {activeBarrel ? activeBarrel.serialNumber : 'Barrels'}
-              </span>
             </button>
           </div>
         </div>
@@ -162,19 +162,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Desktop Active Barrel & Ammo Pill + Mode Toggle + Quick Export */}
         <div className="hidden md:flex items-center gap-2.5">
-          {/* Easy / Expert mode toggle — desktop */}
-          <button
-            onClick={onToggleEasyMode}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border font-bold text-sm transition-all active:scale-95 ${
-              isEasyMode
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
-                : 'bg-neutral-800 border-white/15 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title={isEasyMode ? 'Switch to Expert Mode' : 'Switch to Easy Mode'}
-          >
-            {isEasyMode ? '🟢 Easy Mode' : '⚙️ Expert Mode'}
-          </button>
-
           <button
             onClick={onOpenLogbook}
             className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-neutral-900/90 hover:bg-neutral-800/90 border border-white/15 text-left transition-colors cursor-pointer group shadow-sm"
@@ -189,6 +176,19 @@ export const Header: React.FC<HeaderProps> = ({
                 {activeAmmo ? `${activeAmmo.brand} ${activeAmmo.model} (#${activeAmmo.lotNumber})` : 'No Ammo Lot'}
               </div>
             </div>
+          </button>
+
+          {/* Easy / Expert mode toggle — right side of desktop */}
+          <button
+            onClick={onToggleEasyMode}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border font-bold text-sm transition-all active:scale-95 ${
+              isEasyMode
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
+                : 'bg-neutral-800 border-white/15 text-neutral-300 hover:bg-neutral-700'
+            }`}
+            title={isEasyMode ? 'Switch to Expert Mode' : 'Switch to Easy Mode'}
+          >
+            {isEasyMode ? '🟢 Easy Mode' : '⚙️ Expert Mode'}
           </button>
 
           <button
