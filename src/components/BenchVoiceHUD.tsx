@@ -10,6 +10,7 @@ import {
 } from '@/lib/speechRecognition';
 
 interface BenchVoiceHUDProps {
+  activeTab?: string;
   activeTunerClick: number;
   onSetTunerClick: (click: number) => void;
   onNudgeTuner: (delta: number) => void;
@@ -20,6 +21,7 @@ interface BenchVoiceHUDProps {
 }
 
 export const BenchVoiceHUD: React.FC<BenchVoiceHUDProps> = ({
+  activeTab,
   activeTunerClick,
   onSetTunerClick,
   onNudgeTuner,
@@ -171,8 +173,8 @@ export const BenchVoiceHUD: React.FC<BenchVoiceHUDProps> = ({
 
   return (
     <>
-      {/* Floating Bench Mic Pill (Always accessible on Mobile & Desktop) */}
-      <div className="fixed bottom-24 md:bottom-6 right-4 z-40">
+      {/* Floating Bench Mic Pill (Always accessible on Mobile & Desktop, hidden on Advisor tab to prevent covering chat) */}
+      <div className={`fixed bottom-24 md:bottom-6 right-4 z-40 ${activeTab === 'advisor' ? 'hidden' : ''}`}>
         <button
           onClick={() => {
             setIsOpen(true);

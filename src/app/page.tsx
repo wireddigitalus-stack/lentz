@@ -449,7 +449,7 @@ export default function Home() {
 
         {/* TAB 5: AI BALLISTIC ADVISOR */}
         {activeTab === 'advisor' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pb-24 md:pb-0">
             {!isEasyMode && (
               <div>
                 <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
@@ -538,6 +538,7 @@ export default function Home() {
 
       {/* Bench Voice Dictation & Command HUD */}
       <BenchVoiceHUD
+        activeTab={activeTab}
         activeTunerClick={currentClick}
         onSetTunerClick={handleSetClick}
         onNudgeTuner={handleNudgeClick}

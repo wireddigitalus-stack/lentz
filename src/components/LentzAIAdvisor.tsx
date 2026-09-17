@@ -425,7 +425,7 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
 
       {/* DEDICATED FULL WINDOW CHAT MODAL FOR MOBILE & TABLET */}
       {isFullScreen && (
-        <div className="fixed inset-x-0 top-0 bottom-[76px] md:inset-0 z-50 bg-[#08090C] flex flex-col animate-fadeIn">
+        <div className="fixed inset-x-0 top-0 bottom-[calc(78px+env(safe-area-inset-bottom,0px))] md:bottom-0 md:inset-0 z-50 bg-[#08090C] flex flex-col animate-fadeIn">
           {/* Top Bar with Prominent Easy Exit Button */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#10131A] shadow-md shrink-0">
             <div className="flex items-center gap-3">
@@ -532,8 +532,8 @@ export const LentzAIAdvisor: React.FC<LentzAIAdvisorProps> = ({
             ))}
           </div>
 
-          {/* Pinned Bottom Input Bar — pb-safe + env(safe-area-inset-bottom) for iOS keyboard */}
-          <div className="p-4 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-white/15 bg-[#10131A] shrink-0">
+          {/* Pinned Bottom Input Bar — directly right above mobile bottom nav */}
+          <div className="p-3 sm:p-4 border-t border-white/15 bg-[#10131A] shrink-0 shadow-lg">
             <form
               onSubmit={(e) => {
                 e.preventDefault();

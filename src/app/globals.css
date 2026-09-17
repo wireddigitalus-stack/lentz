@@ -174,3 +174,8 @@ body {
 /* iOS Safari viewport fix */
 .h-dvh   { height: 100dvh; }
 .min-h-dvh { min-height: 100dvh; }
+
+/* Safe area padding helper for iOS notch & home bar */
+.pb-safe {
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+}
