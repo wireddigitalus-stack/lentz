@@ -29,7 +29,6 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const tabs = [
     { id: 'tuner', label: 'Tuner Dial', icon: Disc },
-    { id: 'scanner', label: 'Target CV', icon: Target },
     { id: 'harmonics', label: 'Harmonics', icon: Activity },
     { id: 'weather', label: 'Weather / DA', icon: CloudSun },
     { id: 'advisor', label: 'AI Advisor', icon: Sparkles },

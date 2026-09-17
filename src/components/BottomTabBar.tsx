@@ -11,7 +11,6 @@ interface BottomTabBarProps {
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, setActiveTab }) => {
   const tabs = [
     { id: 'tuner', label: 'Tuner', icon: Disc },
-    { id: 'scanner', label: 'Target', icon: Target },
     { id: 'harmonics', label: 'Harmonics', icon: Activity },
     { id: 'weather', label: 'Weather', icon: CloudSun },
     { id: 'advisor', label: 'AI Advisor', icon: Sparkles },

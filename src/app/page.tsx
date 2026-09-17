@@ -289,8 +289,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 2: TARGET COMPUTER VISION SCANNER */}
-        {activeTab === 'scanner' && (
+        {/* TAB 2: TARGET COMPUTER VISION SCANNER (Temporarily hidden per request) */}
+        {/* activeTab === 'scanner' && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
@@ -312,7 +312,7 @@ export default function Home() {
               activeTunerClick={currentClick}
             />
           </div>
-        )}
+        ) */}
 
         {/* TAB 3: HARMONIC CURVE & SWEET SPOT */}
         {activeTab === 'harmonics' && (
