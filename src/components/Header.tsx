@@ -146,7 +146,14 @@ export const Header: React.FC<HeaderProps> = ({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                  }
+                  setActiveTab(tab.id);
+                }}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
                   isActive
                     ? 'bg-sky-500 text-white shadow-md font-bold scale-[1.02]'

@@ -52,6 +52,19 @@ export default function Home() {
   // Tuner interactive dial click state
   const [currentClick, setCurrentClick] = useState<number>(13);
 
+  // Always scroll to top whenever switching tabs
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Prevent browser scroll restoration from retaining previous tab's scroll offset
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
+
   // Load storage on client mount
   useEffect(() => {
     setMounted(true);

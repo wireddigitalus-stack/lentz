@@ -23,6 +23,11 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, setActive
         navigator.vibrate(12);
       } catch (e) {}
     }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
     setActiveTab(tabId);
   };
 
