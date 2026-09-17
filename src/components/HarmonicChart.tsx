@@ -244,10 +244,10 @@ export const HarmonicChart: React.FC<HarmonicChartProps> = ({
         </div>
 
         {/* SVG Chart */}
-        <div className="w-full overflow-x-auto select-none">
+        <div className="w-full overflow-hidden select-none">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="w-full h-auto min-w-[550px] max-h-[350px]"
+            className="w-full h-auto max-h-[350px]"
           >
             {/* Background grid */}
             {[0, 0.1, 0.2, 0.3, 0.4].map((v) => {
@@ -486,8 +486,101 @@ export const HarmonicChart: React.FC<HarmonicChartProps> = ({
           </form>
         )}
 
-        {/* Runs Table */}
-        <div className="overflow-x-auto rounded-xl border border-white/10">
+        {/* Mobile View: High-contrast stacked Run Cards (Zero side-scroll) */}
+        <div className="md:hidden flex flex-col gap-3">
+          {runs.map((r) => {
+            const isBest = r.tunerClick === analysis.sweetSpotClick;
+            const inWindow =
+              r.tunerClick >= analysis.forgivingWindow.startClick &&
+              r.tunerClick <= analysis.forgivingWindow.endClick;
+
+            return (
+              <div
+                key={r.id}
+                className={`p-4 rounded-2xl border transition-all relative flex flex-col gap-3 ${
+                  isBest
+                    ? 'bg-emerald-950/20 border-emerald-500/50 shadow-md'
+                    : inWindow
+                    ? 'bg-sky-950/20 border-sky-500/40 shadow-sm'
+                    : 'bg-[#10131A]/90 border-white/10'
+                }`}
+              >
+                {/* Header: Setting badge + Status badge + Delete */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-black font-mono text-white px-3 py-1 rounded-xl bg-neutral-800 border border-white/15">
+                      {r.tunerClick} Clicks
+                    </span>
+                    {isBest ? (
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/25 text-emerald-300 text-xs font-black font-mono border border-emerald-500/40">
+                        SWEET SPOT
+                      </span>
+                    ) : inWindow ? (
+                      <span className="px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold font-mono border border-sky-500/30">
+                        IN WINDOW
+                      </span>
+                    ) : (
+                      <span className="text-neutral-400 text-xs font-mono font-medium">
+                        Off Node
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteRun(r.id)}
+                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Delete run"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Metrics 3-up grid */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-xl bg-black/40 border border-red-500/20">
+                    <span className="text-[11px] font-mono text-red-400 uppercase font-bold block">
+                      Vertical
+                    </span>
+                    <span className="text-lg font-black font-mono text-red-200 mt-0.5 block">
+                      {r.verticalSpreadInches}&quot;
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-black/40 border border-white/10">
+                    <span className="text-[11px] font-mono text-neutral-400 uppercase font-bold block">
+                      Group (ES)
+                    </span>
+                    <span className="text-lg font-black font-mono text-white mt-0.5 block">
+                      {r.groupSizeInches}&quot;
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-black/40 border border-white/10">
+                    <span className="text-[11px] font-mono text-neutral-400 uppercase font-bold block">
+                      MOA @ 50y
+                    </span>
+                    <span className="text-lg font-black font-mono text-sky-300 mt-0.5 block">
+                      {r.groupMoa50Yd}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Optional Note or Action */}
+                {onApplyClick && (
+                  <button
+                    onClick={() => onApplyClick(r.tunerClick)}
+                    className="w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-sky-300 flex items-center justify-center gap-1.5 transition-all active:scale-98"
+                  >
+                    <span>Dial Tuner to {r.tunerClick} Clicks</span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full Data Table */}
+        <div className="hidden md:block overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full text-left text-sm text-neutral-200 font-mono">
             <thead className="bg-neutral-900/90 text-neutral-300 uppercase text-xs font-bold tracking-wider border-b border-white/10">
               <tr>
@@ -537,7 +630,7 @@ export const HarmonicChart: React.FC<HarmonicChartProps> = ({
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleDeleteRun(r.id)}
-                        className="p-1.5 rounded text-neutral-400 hover:text-red-400 transition-colors"
+                        className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded text-neutral-400 hover:text-red-400 transition-colors"
                         title="Delete run"
                       >
                         <Trash2 className="w-4 h-4" />
