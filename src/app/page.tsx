@@ -220,7 +220,11 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-[#08090C] selection:bg-sky-500 selection:text-white">
+    <div
+      className={`min-h-screen w-full max-w-full overflow-x-hidden flex flex-col transition-all duration-300 selection:bg-sky-500 selection:text-white ${
+        !isEasyMode ? 'bg-expert-camo' : 'bg-easy-clean'
+      }`}
+    >
       {/* App Header */}
       <Header
         activeTab={activeTab}
@@ -239,14 +243,18 @@ export default function Home() {
         {activeTab === 'tuner' && (
           <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto">
             <div className="text-center">
-              <span className="text-xs md:text-sm font-mono font-bold px-3.5 py-1.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-sm">
-                {activeBarrel?.name || 'Lentz Custom 2500X'}
+              <span className={`text-xs md:text-sm font-mono font-bold px-3.5 py-1.5 rounded-full border shadow-sm transition-colors ${
+                !isEasyMode
+                  ? 'bg-sky-500/20 text-sky-200 border-sky-400/40 shadow-glow-blue'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {activeBarrel?.name || 'Lentz Custom 2500X'} {!isEasyMode && '• Expert Tactical Mode'}
               </span>
               <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mt-3 font-sans">
                 {isEasyMode ? 'Tuner Click Position' : 'Precision Barrel Tuner'}
               </h1>
               {!isEasyMode && (
-                <p className="text-xs md:text-sm text-neutral-300 mt-1.5 font-medium">
+                <p className="text-xs md:text-sm text-sky-200/70 mt-1.5 font-medium">
                   Harrell Precision 50-Click Rotary Dial • Drag bezel or use steppers to calibrate muzzle harmonics
                 </p>
               )}
@@ -257,7 +265,24 @@ export default function Home() {
               )}
             </div>
 
-            {/* ⚡ JMP TUNER CALCULATOR — Front & Center */}
+            {/* In EXPERT MODE: Wheel is FIRST! */}
+            {!isEasyMode && (
+              <div className="w-full">
+                <TunerDial
+                  currentClick={currentClick}
+                  onSetClick={handleSetClick}
+                  sweetSpotClick={harmonicAnalysis.sweetSpotClick}
+                  forgivingWindow={harmonicAnalysis.forgivingWindow}
+                  tunerType={activeBarrel?.tunerModel}
+                  barrelName={activeBarrel?.name}
+                  onGoToPurdy={() => setActiveTab('harmonics')}
+                  isEasyMode={isEasyMode}
+                  onAskLentz={() => setActiveTab('advisor')}
+                />
+              </div>
+            )}
+
+            {/* ⚡ JMP TUNER CALCULATOR (In Easy Mode it is first, in Expert Mode it sits below the interactive dial) */}
             <div className="w-full">
               <JMPQuickCalculator
                 barrel={activeBarrel}
@@ -277,19 +302,22 @@ export default function Home() {
               />
             </div>
 
-            <div className="w-full">
-              <TunerDial
-                currentClick={currentClick}
-                onSetClick={handleSetClick}
-                sweetSpotClick={harmonicAnalysis.sweetSpotClick}
-                forgivingWindow={harmonicAnalysis.forgivingWindow}
-                tunerType={activeBarrel?.tunerModel}
-                barrelName={activeBarrel?.name}
-                onGoToPurdy={() => setActiveTab('harmonics')}
-                isEasyMode={isEasyMode}
-                onAskLentz={() => setActiveTab('advisor')}
-              />
-            </div>
+            {/* In EASY MODE: Simple Stepper & Status Card */}
+            {isEasyMode && (
+              <div className="w-full">
+                <TunerDial
+                  currentClick={currentClick}
+                  onSetClick={handleSetClick}
+                  sweetSpotClick={harmonicAnalysis.sweetSpotClick}
+                  forgivingWindow={harmonicAnalysis.forgivingWindow}
+                  tunerType={activeBarrel?.tunerModel}
+                  barrelName={activeBarrel?.name}
+                  onGoToPurdy={() => setActiveTab('harmonics')}
+                  isEasyMode={isEasyMode}
+                  onAskLentz={() => setActiveTab('advisor')}
+                />
+              </div>
+            )}
 
             {/* Quick action bar */}
             <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
