@@ -1,0 +1,17 @@
+{
+  "name": "Lentz TunerPro",
+  "short_name": "TunerPro",
+  "description": "Precision Rimfire Barrel Harmonic Optimizer — Live Weather, Purdy Method 4, Match Day Logging, AI Ballistic Advisor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08090C",
+  "theme_color": "#08090C",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

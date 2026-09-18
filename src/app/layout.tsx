@@ -3,12 +3,37 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Lentz TunerPro — Master Rimfire Barrel Harmonics',
-  description: 'Precision .22 LR barrel tuner optimization, target computer vision scanner, and harmonic sweet spot platform inspired by Jeremiah Lentz.',
+  description: 'Precision .22 LR barrel tuner optimization platform by Lentz Precision Rifles. Live weather, Purdy Method 4 harmonics, thermal drift compensation, match day logging, and AI expert advisor. ARA • PSL • IR50/50.',
+  icons: {
+    icon: '/apple-touch-icon.jpg',
+    apple: '/apple-touch-icon.jpg',
+  },
+  openGraph: {
+    title: 'Lentz TunerPro — Precision Rimfire Barrel Harmonic Optimizer',
+    description: 'The most advanced rimfire barrel tuner app for competitive benchrest shooters. Live weather, harmonic analysis, match logging, and AI ballistic advisor. Built for Lentz Precision Rifles.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 675,
+        alt: 'Lentz TunerPro — Precision Rimfire Barrel Harmonic Optimizer',
+      },
+    ],
+    type: 'website',
+    siteName: 'Lentz TunerPro',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Lentz TunerPro — Precision Rimfire Barrel Harmonic Optimizer',
+    description: 'Live weather, Purdy Method 4, harmonic sweet spot analysis, match day logging, and AI ballistic advisor. Built for competitive .22 LR benchrest.',
+    images: ['/og-image.jpg'],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Lentz TunerPro',
   },
+  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {
