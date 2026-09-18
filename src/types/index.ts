@@ -151,3 +151,49 @@ export interface VelocityClickEntry {
   velocityFps: number;
   clicks: number;
 }
+
+// ─── Match Day & Snapshot Types ─────────────────────────────────────────────
+
+/** A single relay within a match day */
+export interface MatchRelay {
+  id: string;
+  relayNumber: number;
+  score?: number;
+  xCount?: number;
+  tunerClick: number;
+  conditions: EnvironmentalConditions;
+  notes?: string;
+  timestamp: string;
+}
+
+/** Match type presets */
+export type MatchType = 'ARA 2500' | 'PSL' | 'IR50/50' | 'Practice' | 'Lot Test' | 'Other';
+
+/** A full match day log */
+export interface MatchDayLog {
+  id: string;
+  date: string;
+  venue: string;
+  matchType: MatchType;
+  barrelId: string;
+  ammoLotId: string;
+  relays: MatchRelay[];
+  totalScore?: number;
+  totalXCount?: number;
+  startingConditions: EnvironmentalConditions;
+  tunerClickUsed: number;
+  notes?: string;
+  createdAt: string;
+}
+
+/** A quick condition snapshot */
+export interface ConditionSnapshot {
+  id: string;
+  timestamp: string;
+  conditions: EnvironmentalConditions;
+  tunerClick: number;
+  note?: string;
+  matchDayId?: string;
+  score?: number;
+}
+

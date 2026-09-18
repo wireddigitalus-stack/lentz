@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Target, Disc, Activity, CloudSun, Sparkles, BookOpen } from 'lucide-react';
+import { Target, Disc, Activity, CloudSun, Sparkles, BookOpen, ClipboardList } from 'lucide-react';
 
 interface BottomTabBarProps {
   activeTab: string;
@@ -18,7 +18,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
     { id: 'tuner', label: 'Tuner', icon: Disc },
     { id: 'harmonics', label: 'Harmonics', icon: Activity },
     { id: 'weather', label: 'Weather', icon: CloudSun },
-    { id: 'advisor', label: 'AI Advisor', icon: Sparkles },
+    { id: 'match_log', label: 'Match Log', icon: ClipboardList },
+    { id: 'advisor', label: 'Advisor', icon: Sparkles },
     { id: 'logbook', label: 'Logbook', icon: BookOpen },
   ];
 
@@ -49,20 +50,20 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-2 px-1 rounded-xl transition-all duration-150 active:scale-90 select-none min-h-[60px] ${
+              className={`flex flex-col items-center justify-center flex-1 py-1.5 px-0.5 rounded-xl transition-all duration-150 active:scale-90 select-none min-h-[56px] ${
                 isActive
                   ? 'text-sky-400 font-bold'
                   : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
               <div
-                className={`relative p-1.5 rounded-xl transition-colors ${
+                className={`relative p-1 rounded-xl transition-colors ${
                   isActive ? 'bg-sky-500/20 text-sky-400' : ''
                 }`}
               >
-                <Icon className={`w-6 h-6 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
               </div>
-              <span className="text-[13px] font-semibold tracking-tight mt-0.5 whitespace-nowrap leading-tight">
+              <span className="text-[11px] font-semibold tracking-tight mt-0.5 whitespace-nowrap leading-tight">
                 {tab.label}
               </span>
             </button>

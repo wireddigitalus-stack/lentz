@@ -1,4 +1,4 @@
-import { BarrelProfile, AmmoLot, TuneSession } from '@/types';
+import { BarrelProfile, AmmoLot, TuneSession, MatchDayLog, ConditionSnapshot } from '@/types';
 import { DEFAULT_BARRELS, DEFAULT_AMMO_LOTS, DEFAULT_TUNING_SESSION } from './constants';
 
 const STORAGE_KEYS = {
@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
   SESSIONS: 'lentz_tuner_sessions_v1',
   ACTIVE_BARREL_ID: 'lentz_tuner_active_barrel_v1',
   ACTIVE_AMMO_ID: 'lentz_tuner_active_ammo_v1',
+  MATCH_DAYS: 'lentz_tuner_match_days_v1',
+  SNAPSHOTS: 'lentz_tuner_snapshots_v1',
 };
 
 // Safe browser local storage helper
@@ -137,11 +139,13 @@ export function setActiveAmmoId(id: string): void {
 export function exportAllDataAsJSON(): string {
   const payload = {
     app: 'Lentz TunerPro',
-    version: '1.0.0',
+    version: '1.1.0',
     exportedAt: new Date().toISOString(),
     barrels: getStoredBarrels(),
     ammoLots: getStoredAmmoLots(),
     sessions: getStoredSessions(),
+    matchDays: getStoredMatchDays(),
+    snapshots: getStoredSnapshots(),
   };
   return JSON.stringify(payload, null, 2);
 }
@@ -152,6 +156,8 @@ export function importAllDataFromJSON(jsonString: string): boolean {
     if (Array.isArray(data.barrels)) setStoredBarrels(data.barrels);
     if (Array.isArray(data.ammoLots)) setStoredAmmoLots(data.ammoLots);
     if (Array.isArray(data.sessions)) setStoredSessions(data.sessions);
+    if (Array.isArray(data.matchDays)) setStoredItem(STORAGE_KEYS.MATCH_DAYS, data.matchDays);
+    if (Array.isArray(data.snapshots)) setStoredItem(STORAGE_KEYS.SNAPSHOTS, data.snapshots);
     return true;
   } catch (err) {
     console.error('Failed to import JSON data:', err);
@@ -166,3 +172,45 @@ export function resetToJeremiahLentzDefaults(): void {
   setActiveBarrelId(DEFAULT_BARRELS[0].id);
   setActiveAmmoId(DEFAULT_AMMO_LOTS[0].id);
 }
+
+// ─── Match Day Logs ─────────────────────────────────────────────────────────
+
+export function getStoredMatchDays(): MatchDayLog[] {
+  return getStoredItem<MatchDayLog[]>(STORAGE_KEYS.MATCH_DAYS, []);
+}
+
+export function saveMatchDay(log: MatchDayLog): void {
+  const days = getStoredMatchDays();
+  const idx = days.findIndex((d) => d.id === log.id);
+  if (idx >= 0) {
+    days[idx] = log;
+  } else {
+    days.unshift(log);
+  }
+  setStoredItem(STORAGE_KEYS.MATCH_DAYS, days);
+}
+
+export function deleteMatchDay(id: string): void {
+  const days = getStoredMatchDays().filter((d) => d.id !== id);
+  setStoredItem(STORAGE_KEYS.MATCH_DAYS, days);
+}
+
+// ─── Condition Snapshots ────────────────────────────────────────────────────
+
+export function getStoredSnapshots(): ConditionSnapshot[] {
+  return getStoredItem<ConditionSnapshot[]>(STORAGE_KEYS.SNAPSHOTS, []);
+}
+
+export function saveSnapshot(snap: ConditionSnapshot): void {
+  const snaps = getStoredSnapshots();
+  snaps.unshift(snap);
+  // Keep last 200 snapshots
+  if (snaps.length > 200) snaps.length = 200;
+  setStoredItem(STORAGE_KEYS.SNAPSHOTS, snaps);
+}
+
+export function deleteSnapshot(id: string): void {
+  const snaps = getStoredSnapshots().filter((s) => s.id !== id);
+  setStoredItem(STORAGE_KEYS.SNAPSHOTS, snaps);
+}
+

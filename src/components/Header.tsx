@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Target, Disc, Activity, CloudSun, BookOpen, Sparkles, Download, RefreshCw } from 'lucide-react';
+import { Target, Disc, Activity, CloudSun, BookOpen, Sparkles, Download, RefreshCw, ClipboardList } from 'lucide-react';
 import { BarrelProfile, AmmoLot } from '@/types';
 
 interface HeaderProps {
@@ -33,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'tuner', label: 'Tuner Dial', icon: Disc },
     { id: 'harmonics', label: 'Harmonics', icon: Activity },
     { id: 'weather', label: 'Weather / DA', icon: CloudSun },
+    { id: 'match_log', label: 'Match Log', icon: ClipboardList },
     { id: 'advisor', label: 'AI Advisor', icon: Sparkles },
     { id: 'logbook', label: 'Logbook', icon: BookOpen },
   ];

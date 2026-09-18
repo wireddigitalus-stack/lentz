@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { TunerDial } from '@/components/TunerDial';
 import { TargetScanner } from '@/components/TargetScanner';
@@ -12,8 +12,12 @@ import { BottomTabBar } from '@/components/BottomTabBar';
 import { BenchVoiceHUD } from '@/components/BenchVoiceHUD';
 import { ChronoImportCard } from '@/components/ChronoImportCard';
 import { JMPQuickCalculator } from '@/components/JMPQuickCalculator';
+import { MatchDayLogComponent } from '@/components/MatchDayLog';
+import { RangeCompanion } from '@/components/RangeCompanion';
+import { SnapshotButton } from '@/components/SnapshotButton';
+import { AmmoLotComparison } from '@/components/AmmoLotComparison';
 
-import { BarrelProfile, AmmoLot, TuneSession, TuneRun, EnvironmentalConditions } from '@/types';
+import { BarrelProfile, AmmoLot, TuneSession, TuneRun, EnvironmentalConditions, MatchDayLog, ConditionSnapshot } from '@/types';
 import {
   getStoredBarrels,
   setStoredBarrels,
@@ -32,6 +36,11 @@ import {
   setActiveAmmoId,
   exportAllDataAsJSON,
   importAllDataFromJSON,
+  getStoredMatchDays,
+  saveMatchDay,
+  deleteMatchDay,
+  getStoredSnapshots,
+  saveSnapshot,
 } from '@/lib/storage';
 import { analyzeHarmonics } from '@/lib/ballistics';
 
@@ -69,6 +78,11 @@ export default function Home() {
 
   // Tuner interactive dial click state
   const [currentClick, setCurrentClick] = useState<number>(13);
+
+  // Match day & snapshot state
+  const [matchDays, setMatchDays] = useState<MatchDayLog[]>([]);
+  const [snapshots, setSnapshots] = useState<ConditionSnapshot[]>([]);
+  const [loadingWeather, setLoadingWeather] = useState(false);
 
   // Always scroll to top whenever switching tabs
   useEffect(() => {
@@ -112,6 +126,8 @@ export default function Home() {
     setSessions(loadedSessions);
     setActiveBarrelIdState(activeBId);
     setActiveAmmoIdState(activeAId);
+    setMatchDays(getStoredMatchDays());
+    setSnapshots(getStoredSnapshots());
 
     // If active session has sweet spot, set dial
     if (loadedSessions.length > 0 && loadedSessions[0].sweetSpotClick !== undefined) {
@@ -242,6 +258,65 @@ export default function Home() {
     reader.readAsText(file);
   };
 
+  // ─── Match Day & Snapshot Handlers ──────────────────────────────────────
+  const handleSaveMatchDay = (day: MatchDayLog) => {
+    saveMatchDay(day);
+    setMatchDays(getStoredMatchDays());
+  };
+
+  const handleDeleteMatchDay = (id: string) => {
+    deleteMatchDay(id);
+    setMatchDays(getStoredMatchDays());
+  };
+
+  const handleSaveSnapshot = (snap: ConditionSnapshot) => {
+    saveSnapshot(snap);
+    setSnapshots(getStoredSnapshots());
+  };
+
+  // One-tap weather fetch for Range Companion
+  const handleRangeFetchWeather = async () => {
+    setLoadingWeather(true);
+    try {
+      let lat = 36.5334, lon = -82.3276, locName = 'Bristol / Blountville, TN', elev = 1520;
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('No GPS'));
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, maximumAge: 120000 });
+        });
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+        locName = `GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+      } catch { /* fall through to default */ }
+
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      const c = data.current;
+
+      const pressureInHg = Number((c.surface_pressure * 0.02953).toFixed(2));
+      const { calculateDensityAltitude } = await import('@/lib/ballistics');
+      const elevFt = data.elevation != null ? Math.round(data.elevation * 3.28084) : elev;
+
+      handleUpdateEnvironment({
+        tempF: Math.round(c.temperature_2m),
+        humidityPercent: Math.round(c.relative_humidity_2m),
+        pressureInHg,
+        windSpeedMph: Math.round(c.wind_speed_10m),
+        windDirectionClock: Math.round(c.wind_direction_10m / 30) || 12,
+        elevationFt: elevFt,
+        densityAltitudeFt: calculateDensityAltitude(elevFt, Math.round(c.temperature_2m), pressureInHg),
+        locationName: locName,
+        lastUpdated: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Range weather fetch failed:', err);
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#08090C] flex items-center justify-center text-neutral-400 font-mono text-sm">
@@ -272,7 +347,30 @@ export default function Home() {
       {/* Main Content Viewport with mobile bottom bar clearance */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-32 md:pb-8 overflow-x-hidden">
         {/* TAB 1: TUNER ROTARY DIAL */}
-        {activeTab === 'tuner' && (
+        {activeTab === 'tuner' && isEasyMode && (
+          <RangeCompanion
+            environment={activeSession.environment}
+            barrel={activeBarrel}
+            ammo={activeAmmo}
+            currentClick={currentClick}
+            sweetSpotClick={activeSession.sweetSpotClick}
+            lastMatchDay={matchDays[0]}
+            onFetchWeather={handleRangeFetchWeather}
+            onStartMatch={() => handleSwitchTab('match_log')}
+            onTakeSnapshot={() => {
+              handleSaveSnapshot({
+                id: `snap-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                conditions: activeSession.environment,
+                tunerClick: currentClick,
+              });
+            }}
+            onOpenAdvisor={() => handleSwitchTab('advisor')}
+            loadingWeather={loadingWeather}
+          />
+        )}
+
+        {activeTab === 'tuner' && !isEasyMode && (
           <div className="flex flex-col items-center gap-6 max-w-2xl mx-auto">
             <div className="text-center">
               <span className={`text-xs md:text-sm font-mono font-bold px-3.5 py-1.5 rounded-full border shadow-sm transition-colors ${
@@ -466,6 +564,35 @@ export default function Home() {
           </div>
         )}
 
+        {/* TAB: MATCH DAY LOG */}
+        {activeTab === 'match_log' && (
+          <div className="flex flex-col gap-4">
+            {!isEasyMode && (
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                  Match Day Log
+                </h2>
+                <p className="text-xs md:text-sm text-neutral-300 font-medium">
+                  Track relay-by-relay scores, conditions, and tuner settings
+                </p>
+              </div>
+            )}
+
+            <MatchDayLogComponent
+              matchDays={matchDays}
+              snapshots={snapshots}
+              currentEnvironment={activeSession.environment}
+              currentClick={currentClick}
+              barrel={activeBarrel}
+              ammo={activeAmmo}
+              onSaveMatchDay={handleSaveMatchDay}
+              onDeleteMatchDay={handleDeleteMatchDay}
+              onSaveSnapshot={handleSaveSnapshot}
+              isEasyMode={isEasyMode}
+            />
+          </div>
+        )}
+
         {/* TAB 5: AI BALLISTIC ADVISOR */}
         {activeTab === 'advisor' && (
           <div className="flex flex-col gap-4 pb-24 md:pb-0">
@@ -545,6 +672,14 @@ export default function Home() {
               onImport={handleImportJSON}
               onReloadData={refreshData}
             />
+
+            {/* Ammo Lot Comparison */}
+            <AmmoLotComparison
+              ammoLots={ammoLots}
+              sessions={sessions}
+              activeAmmoId={activeAmmoIdState}
+              isEasyMode={isEasyMode}
+            />
           </div>
         )}
       </main>
@@ -553,7 +688,7 @@ export default function Home() {
       <footer className="border-t border-white/10 py-5 px-6 text-center text-xs md:text-sm text-neutral-300 font-mono font-medium mb-16 md:mb-0">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
-            Lentz TunerPro v1.0 • Dedicated to Jeremiah Lentz Precision Rifles
+            Lentz TunerPro v1.1 • Dedicated to Jeremiah Lentz Precision Rifles
           </span>
           <span className="text-neutral-400">
             ARA • PSL • IR50/50 Match Grade Harmonics
