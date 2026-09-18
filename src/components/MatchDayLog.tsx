@@ -47,7 +47,10 @@ export function MatchDayLogComponent({
   // Start Match State
   const [newMatchType, setNewMatchType] = useState<MatchType>('ARA 2500');
   const [newVenue, setNewVenue] = useState(currentEnvironment.locationName || '');
-  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newDate, setNewDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
   // Active Match State
   const [activeMatch, setActiveMatch] = useState<Partial<MatchDayLog> | null>(null);
@@ -77,7 +80,8 @@ export function MatchDayLogComponent({
 
   const handleStartNewMatch = () => {
     setNewVenue(currentEnvironment.locationName || '');
-    setNewDate(new Date().toISOString().split('T')[0]);
+    const d = new Date();
+    setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
     setViewMode('start');
   };
 
