@@ -65,6 +65,15 @@ body {
   animation: fadeIn 0.22s ease-out both;
 }
 
+/* Weather data shimmer loading animation */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
 /* ──────────────────────────────────────────────
    EXPERT MODE DARK BLUE TACTICAL CAMO BACKGROUND
 ────────────────────────────────────────────── */

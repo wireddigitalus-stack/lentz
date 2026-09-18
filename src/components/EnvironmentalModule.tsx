@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CloudSun,
   Wind,
@@ -220,6 +220,69 @@ export const EnvironmentalModule: React.FC<EnvironmentalModuleProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ─── AUTO-REFRESH every 2 minutes for real-time data ──────────────
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    autoRefreshRef.current = setInterval(() => {
+      if (selectedRange.startsWith('Current')) {
+        // Re-use GPS if available
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = Number(pos.coords.latitude.toFixed(4));
+              const lon = Number(pos.coords.longitude.toFixed(4));
+              fetchLiveWeather(lat, lon, `Current Location (${lat}°, ${lon}°)`, true);
+            },
+            () => {
+              const r = PRESET_RANGES.find((p) => p.name === selectedRange) ?? PRESET_RANGES[0];
+              fetchLiveWeather(r.lat, r.lon, r.name, false);
+            },
+            { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+          );
+        }
+      } else {
+        const r = PRESET_RANGES.find((p) => p.name === selectedRange) ?? PRESET_RANGES[0];
+        fetchLiveWeather(r.lat, r.lon, r.name, false);
+      }
+    }, 120_000); // 2 minutes
+
+    return () => {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRange]);
+
+  // ─── Live "seconds ago" counter ──────────────────────────────────
+  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
+  const [dataFlash, setDataFlash] = useState(false);
+
+  useEffect(() => {
+    if (!env.lastUpdated) return;
+    const tick = () => {
+      const diff = Math.round((Date.now() - new Date(env.lastUpdated!).getTime()) / 1000);
+      setSecondsAgo(diff);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [env.lastUpdated]);
+
+  // Flash animation when data refreshes
+  useEffect(() => {
+    if (!env.lastUpdated) return;
+    setDataFlash(true);
+    const t = setTimeout(() => setDataFlash(false), 1200);
+    return () => clearTimeout(t);
+  }, [env.lastUpdated]);
+
+  const formatAge = (s: number | null) => {
+    if (s === null) return 'No data yet';
+    if (s < 5) return 'Just now';
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    return `${Math.floor(s / 3600)}h ago`;
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* ──────────────────────────────────────────────
@@ -272,11 +335,11 @@ export const EnvironmentalModule: React.FC<EnvironmentalModuleProps> = ({
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${loadingWeather ? 'bg-sky-400 animate-ping' : 'bg-emerald-400 animate-ping'}`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${loadingWeather ? 'bg-sky-500' : 'bg-emerald-500'}`}></span>
             </span>
-            <span className="text-xs font-mono font-extrabold uppercase tracking-widest text-emerald-300">
-              Live Atmosphere
+            <span className={`text-xs font-mono font-extrabold uppercase tracking-widest ${loadingWeather ? 'text-sky-300' : 'text-emerald-300'}`}>
+              {loadingWeather ? 'Updating…' : 'Live Atmosphere'}
             </span>
             <span className="text-white/20">•</span>
             <span className="text-xs md:text-sm font-semibold text-neutral-200 truncate max-w-[220px] sm:max-w-md">
@@ -288,16 +351,48 @@ export const EnvironmentalModule: React.FC<EnvironmentalModuleProps> = ({
             <span className="text-xs font-mono text-neutral-400">
               {env.elevationFt ? `${env.elevationFt.toLocaleString()} ft MSL` : ''}
             </span>
-            {env.lastUpdated && (
-              <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-neutral-300">
-                {new Date(env.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+            {/* Live countdown badge */}
+            <span className={`text-xs font-mono px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition-all duration-300 ${
+              loadingWeather
+                ? 'bg-sky-500/15 border-sky-500/40 text-sky-300'
+                : secondsAgo !== null && secondsAgo < 10
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-white/5 border-white/10 text-neutral-300'
+            }`}>
+              {loadingWeather ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Fetching…</span>
+                </>
+              ) : (
+                <>
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${secondsAgo !== null && secondsAgo < 10 ? 'bg-emerald-400' : 'bg-neutral-400'}`} />
+                  <span>{formatAge(secondsAgo)}</span>
+                </>
+              )}
+            </span>
           </div>
         </div>
 
+        {/* Auto-refresh indicator strip */}
+        <div className="relative z-10 mt-2 flex items-center justify-between text-[10px] font-mono text-neutral-500">
+          <span>Auto-refreshes every 2 min</span>
+          {env.lastUpdated && (
+            <span className="text-neutral-400">
+              Last: {new Date(env.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          )}
+        </div>
+
+        {/* Loading shimmer overlay on hero cards */}
+        {loadingWeather && (
+          <div className="absolute inset-0 z-20 pointer-events-none rounded-3xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-400/5 to-transparent animate-shimmer" />
+          </div>
+        )}
+
         {/* Hero Atmospheric Big Numbers Spotlight */}
-        <div className="relative z-10 mt-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div className={`relative z-10 mt-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-center transition-all duration-500 ${dataFlash ? 'ring-1 ring-emerald-500/30 rounded-2xl' : ''}`}>
           {/* Main Temperature & Weather Graphic */}
           <div className="md:col-span-5 flex items-center gap-5">
             <div className="relative shrink-0">
